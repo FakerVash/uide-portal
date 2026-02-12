@@ -1,0 +1,165 @@
+@import "tailwindcss";
+
+/* ==========================================================
+UniServicios Design System - Versión Optimizada
+==========================================================
+*/
+
+@theme {
+  /* Registro de colores para usar con clases de Tailwind (text-brand-gold, etc.) */
+  --color-brand-gold: #ebac02;
+  --color-brand-magenta: #830e41;
+}
+
+:root {
+  /* Colores de Estado */
+  --success: #10b981;
+  --error: #ef4444;
+  --warning: #f59e0b;
+  --info: #3b82f6;
+
+  /* Semántica de Colores */
+  --bg-main: #f9fafb;
+  --bg-card: #ffffff;
+  --text-main: #111827; /* Negro-Gris 900 */
+  --text-muted: #4b5563; /* Gris 600 */
+  --text-subtle: #9ca3af; /* Gris 400 */
+  --border-color: #e5e7eb; /* Gris 200 */
+
+  /* Gradientes Dinámicos */
+  --gradient-primary: linear-gradient(
+    135deg,
+    #ebac02 0%,
+    #830e41 100%
+  );
+  --gradient-subtle: linear-gradient(
+    135deg,
+    rgba(235, 172, 2, 0.05) 0%,
+    rgba(131, 14, 65, 0.05) 100%
+  );
+}
+
+/* --- Estilos Base --- */
+
+@layer base {
+  * {
+    @apply border-[--border-color];
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    background-color: var(--bg-main);
+    color: var(--text-main);
+    font-family:
+      "Inter",
+      -apple-system,
+      BlinkMacSystemFont,
+      "Segoe UI",
+      system-ui,
+      sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    @apply transition-colors duration-300;
+  }
+
+  /* Escala Tipográfica Proporcional */
+  h1 {
+    @apply text-4xl md:text-5xl font-black tracking-tight leading-[1.1] mb-6 text-[--text-main];
+  }
+  h2 {
+    @apply text-3xl md:text-4xl font-bold tracking-tight leading-snug mb-5 text-[--text-main];
+  }
+  h3 {
+    @apply text-2xl md:text-3xl font-bold leading-normal mb-4 text-[--text-main];
+  }
+  h4 {
+    @apply text-xl font-bold leading-normal text-[--text-main];
+  }
+
+  p {
+    @apply text-[--text-muted] leading-relaxed mb-4 text-base md:text-lg;
+  }
+
+  /* Selección de texto personalizada */
+  ::selection {
+    background-color: rgba(235, 172, 2, 0.2);
+    color: #830e41;
+  }
+}
+
+/* --- Utilidades y Componentes --- */
+
+@layer components {
+  /* Contenedor estándar con aire */
+  .container-padding {
+    @apply p-6 md:p-12 lg:p-16 max-w-7xl mx-auto;
+  }
+
+  /* Texto con gradiente de marca */
+  .gradient-text {
+    background: var(--gradient-primary);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    display: inline-block;
+  }
+
+  /* Fondo con gradiente y efecto de click */
+  .gradient-bg {
+    background: var(--gradient-primary);
+    @apply text-white font-bold transition-all active:scale-[0.97];
+  }
+
+  /* Fondo sutil para hover o secciones secundarias */
+  .gradient-subtle-bg {
+    background: var(--gradient-subtle);
+  }
+
+  /* Estilo base para todas las tarjetas */
+  .card-style {
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-color);
+    @apply rounded-2xl shadow-sm hover:shadow-md transition-all duration-300;
+  }
+
+  /* Inputs estandarizados */
+  .input-base {
+    background-color: var(--bg-card);
+    @apply border border-[--border-color] rounded-xl px-4 py-2 outline-none focus:ring-2 focus:ring-brand-gold/50 transition-all;
+  }
+}
+
+/* --- Scrollbar Estilizado (Minimalista) --- */
+::-webkit-scrollbar {
+  @apply w-2 h-2;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-main);
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-gray-300 rounded-full border-2 border-transparent bg-clip-content;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-gray-400;
+}
+
+/* --- Animaciones Suaves --- */
+.fade-in {
+  animation: fadeIn 0.5s ease-out forwards;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
