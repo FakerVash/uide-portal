@@ -1,0 +1,15 @@
+node_modules
+dist
+.env
+*.log
+.git
+.vscode
+Dockerfile
+docker-compose.yml
+debug-permission-check.ts
+verify-delete.js
+database.sql
+check-admin-role.ts
+resultado_prueba.txt
+verify.log
+migrations

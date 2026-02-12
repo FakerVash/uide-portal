@@ -1,0 +1,10 @@
+node_modules
+dist
+.env
+*.log
+*.txt
+.vscode/
+
+# Prisma
+/prisma/migrations
+/generated/

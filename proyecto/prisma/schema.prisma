@@ -1,0 +1,237 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Facultad {
+  id_facultad     Int       @id @default(autoincrement())
+  nombre_facultad String    @unique @db.VarChar(150)
+  carreras        Carrera[]
+
+  @@map("facultades")
+}
+
+model Carrera {
+  id_carrera     Int             @id @default(autoincrement())
+  id_facultad    Int
+  nombre_carrera String          @db.VarChar(150)
+  facultad       Facultad        @relation(fields: [id_facultad], references: [id_facultad], onDelete: Cascade)
+  requerimientos Requerimiento[]
+  usuarios       Usuario[]
+
+  @@index([id_facultad], map: "carreras_id_facultad_fkey")
+  @@map("carreras")
+}
+
+model Usuario {
+  id_usuario            Int                @id @default(autoincrement())
+  email                 String             @unique @db.VarChar(100)
+  contrasena            String             @db.VarChar(255)
+  nombre                String             @db.VarChar(100)
+  apellido              String             @db.VarChar(100)
+  telefono              String?            @db.VarChar(20)
+  id_carrera            Int?
+  rol                   Rol                @default(CLIENTE)
+  foto_perfil           String?            @db.VarChar(255)
+  calificacion_promedio Decimal?           @default(0.00) @db.Decimal(3, 2)
+  fecha_registro        DateTime?          @default(now()) @db.Timestamp(0)
+  activo                Boolean?           @default(true)
+  banner                String?            @db.VarChar(255)
+  bio                   String?            @db.Text
+  career                String?            @db.VarChar(150)
+  university            String?            @db.VarChar(150)
+  skills                String?            @db.Text
+  historial             HistorialPerfil[]
+  pedidos_comprados     Pedido[]           @relation("ClientePedidos")
+  postulaciones         Postulacion[]      @relation("EstudiantePostulaciones")
+  requerimientos        Requerimiento[]    @relation("ClienteRequerimientos")
+  resenas               Resena[]
+  servicios             Servicio[]
+  habilidades           UsuarioHabilidad[]
+  carrera               Carrera?           @relation(fields: [id_carrera], references: [id_carrera])
+
+  @@index([id_carrera], map: "usuarios_id_carrera_fkey")
+  @@map("usuarios")
+}
+
+model HistorialPerfil {
+  id_historial     Int      @id @default(autoincrement())
+  id_usuario       Int
+  campo_modificado String   @db.VarChar(50)
+  valor_anterior   String?  @db.Text
+  valor_nuevo      String?  @db.Text
+  fecha_cambio     DateTime @default(now()) @db.Timestamp(0)
+  usuario          Usuario  @relation(fields: [id_usuario], references: [id_usuario], onDelete: Cascade)
+
+  @@index([id_usuario], map: "historial_perfil_id_usuario_fkey")
+  @@map("historial_perfil")
+}
+
+model Categoria {
+  id_categoria     Int        @id @default(autoincrement())
+  nombre_categoria String     @unique @db.VarChar(100)
+  descripcion      String?    @db.Text
+  icono            String?    @db.VarChar(50)
+  servicios        Servicio[]
+
+  @@map("categorias")
+}
+
+model Servicio {
+  id_servicio       Int              @id @default(autoincrement())
+  id_usuario        Int
+  id_categoria      Int
+  titulo            String           @db.VarChar(200)
+  descripcion       String           @db.Text
+  precio            Decimal          @db.Decimal(10, 2)
+  tiempo_entrega    String?          @db.VarChar(100)
+  imagen_portada    String?          @db.VarChar(255)
+  fecha_publicacion DateTime?        @default(now()) @db.Timestamp(0)
+  activo            Boolean?         @default(true)
+  pedidos           Pedido[]
+  resenas           Resena[]
+  imagenes          ServicioImagen[]
+  categoria         Categoria        @relation(fields: [id_categoria], references: [id_categoria], onDelete: Cascade)
+  usuario           Usuario          @relation(fields: [id_usuario], references: [id_usuario], onDelete: Cascade)
+
+  @@index([id_categoria], map: "servicios_id_categoria_fkey")
+  @@index([id_usuario], map: "servicios_id_usuario_fkey")
+  @@fulltext([titulo, descripcion], map: "idx_busqueda")
+  @@map("servicios")
+}
+
+model ServicioImagen {
+  id_imagen   Int      @id @default(autoincrement())
+  id_servicio Int
+  url         String   @db.VarChar(255)
+  servicio    Servicio @relation(fields: [id_servicio], references: [id_servicio], onDelete: Cascade)
+
+  @@index([id_servicio], map: "servicio_imagenes_id_servicio_fkey")
+  @@map("servicio_imagenes")
+}
+
+model Habilidad {
+  id_habilidad     Int                @id @default(autoincrement())
+  nombre_habilidad String             @unique @db.VarChar(100)
+  usuarios         UsuarioHabilidad[]
+
+  @@map("habilidades")
+}
+
+model UsuarioHabilidad {
+  id           Int       @id @default(autoincrement())
+  id_usuario   Int
+  id_habilidad Int
+  habilidad    Habilidad @relation(fields: [id_habilidad], references: [id_habilidad], onDelete: Cascade)
+  usuario      Usuario   @relation(fields: [id_usuario], references: [id_usuario], onDelete: Cascade)
+
+  @@unique([id_usuario, id_habilidad])
+  @@index([id_habilidad], map: "usuario_habilidades_id_habilidad_fkey")
+  @@map("usuario_habilidades")
+}
+
+model Pedido {
+  id_pedido     Int          @id @default(autoincrement())
+  id_servicio   Int
+  id_cliente    Int
+  estado        EstadoPedido @default(PENDIENTE)
+  monto_total   Decimal      @db.Decimal(10, 2)
+  fecha_pedido  DateTime?    @default(now()) @db.Timestamp(0)
+  fecha_entrega DateTime?    @db.DateTime(0)
+  notas         String?      @db.Text
+  archivado     Boolean      @default(false)
+  cliente       Usuario      @relation("ClientePedidos", fields: [id_cliente], references: [id_usuario])
+  servicio      Servicio     @relation(fields: [id_servicio], references: [id_servicio])
+  resena        Resena?
+
+  @@index([id_cliente], map: "pedidos_id_cliente_fkey")
+  @@index([id_servicio], map: "pedidos_id_servicio_fkey")
+  @@map("pedidos")
+}
+
+model Resena {
+  id_resena    Int       @id @default(autoincrement())
+  id_servicio  Int
+  calificacion Int
+  comentario   String?   @db.Text
+  fecha_resena DateTime? @default(now()) @db.Timestamp(0)
+  id_usuario   Int
+  id_pedido    Int?      @unique
+  pedido       Pedido?   @relation(fields: [id_pedido], references: [id_pedido], onDelete: Cascade)
+  servicio     Servicio  @relation(fields: [id_servicio], references: [id_servicio], onDelete: Cascade)
+  usuario      Usuario   @relation(fields: [id_usuario], references: [id_usuario], onDelete: Cascade)
+
+  @@index([id_servicio], map: "resenas_id_servicio_fkey")
+  @@index([id_usuario], map: "resenas_id_usuario_fkey")
+  @@map("resenas")
+}
+
+model AutenticacionMcp {
+  id_autenticacion Int      @id @default(autoincrement())
+  correo           String   @db.VarChar(100)
+  codigo           String   @db.VarChar(100)
+  fecha_solicitud  DateTime @default(now()) @db.Timestamp(0)
+
+  @@map("autenticacion_mcp")
+}
+
+model Mensaje {
+  id_mensaje  Int      @id @default(autoincrement())
+  id_emisor   Int
+  id_receptor Int
+  contenido   String   @db.Text
+  leido       Boolean  @default(false)
+  fecha_envio DateTime @default(now())
+
+  @@map("mensajes")
+}
+
+model Requerimiento {
+  id_requerimiento  Int           @id @default(autoincrement())
+  id_cliente        Int
+  id_carrera        Int
+  titulo            String        @db.VarChar(200)
+  descripcion       String        @db.Text
+  presupuesto       Decimal?      @db.Decimal(10, 2)
+  estado            String        @default("ABIERTO")
+  fecha_publicacion DateTime      @default(now())
+  postulaciones     Postulacion[]
+  carrera           Carrera       @relation(fields: [id_carrera], references: [id_carrera])
+  cliente           Usuario       @relation("ClienteRequerimientos", fields: [id_cliente], references: [id_usuario])
+
+  @@index([id_carrera], map: "requerimientos_id_carrera_fkey")
+  @@index([id_cliente], map: "requerimientos_id_cliente_fkey")
+  @@map("requerimientos")
+}
+
+model Postulacion {
+  id_postulacion    Int           @id @default(autoincrement())
+  id_requerimiento  Int
+  id_estudiante     Int
+  estado            String        @default("PENDIENTE")
+  fecha_postulacion DateTime      @default(now())
+  estudiante        Usuario       @relation("EstudiantePostulaciones", fields: [id_estudiante], references: [id_usuario])
+  requerimiento     Requerimiento @relation(fields: [id_requerimiento], references: [id_requerimiento])
+
+  @@index([id_estudiante], map: "postulaciones_id_estudiante_fkey")
+  @@index([id_requerimiento], map: "postulaciones_id_requerimiento_fkey")
+  @@map("postulaciones")
+}
+
+enum EstadoPedido {
+  PENDIENTE
+  EN_PROCESO
+  CASI_TERMINADO
+  COMPLETADO
+  CANCELADO
+}
+
+enum Rol {
+  ESTUDIANTE
+  CLIENTE
+  ADMIN
+}

@@ -1,0 +1,62 @@
+version: '3.8'
+
+services:
+  # Backend Service
+  backend:
+    build:
+      context: ./proyecto
+      dockerfile: Dockerfile
+    container_name: uide-backend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: ${DATABASE_URL}
+      JWT_SECRET: ${JWT_SECRET}
+      EMAIL_HOST: ${EMAIL_HOST}
+      EMAIL_PORT: ${EMAIL_PORT}
+      EMAIL_USER: ${EMAIL_USER}
+      EMAIL_PASS: ${EMAIL_PASS}
+      PORT: 3000
+      # Aurora specific
+      DB_HOST: "database-1.cgfqom6awot1.us-east-1.rds.amazonaws.com"
+      DB_PORT: "3306"
+      DB_REGION: "us-east-1"
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./proyecto/uploads:/app/uploads
+      - ./test-aurora-connection.js:/app/test-aurora-connection.js
+    networks:
+      - uide-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Frontend Service
+  frontend:
+    build:
+      context: ./portaluidedeserviciosprofesionalesestudiantilespgw
+      dockerfile: Dockerfile
+    container_name: uide-frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - uide-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+networks:
+  uide-network:
+    driver: bridge
+
+volumes:
+  uploads:
+    driver: local

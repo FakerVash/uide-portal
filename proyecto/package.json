@@ -1,0 +1,52 @@
+{
+  "name": "uide-portal-backend",
+  "version": "1.0.0",
+  "description": "Backend for UIDE Student Services Portal",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "mcp": "tsx src/mcp/server.ts",
+    "build": "tsc",
+    "build:production": "tsc --project tsconfig.json",
+    "start": "node dist/index.js",
+    "start:production": "NODE_ENV=production node dist/index.js",
+    "docker:build": "docker build -t uide-backend .",
+    "docker:run": "docker run -p 3000:3000 --env-file .env uide-backend",
+    "db:generate": "prisma generate",
+    "db:push": "prisma db push",
+    "db:migrate": "prisma migrate dev",
+    "db:seed": "tsx prisma/seed.ts",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "@fastify/cors": "^11.2.0",
+    "@fastify/jwt": "^10.0.0",
+    "@fastify/multipart": "^9.4.0",
+    "@fastify/static": "^9.0.0",
+    "@fastify/swagger": "^9.6.1",
+    "@fastify/swagger-ui": "^5.2.5",
+    "@modelcontextprotocol/sdk": "^1.25.3",
+    "@prisma/client": "^6.19.2",
+    "bcrypt": "^6.0.0",
+    "dotenv": "^16.6.1",
+    "fastify": "^5.7.4",
+    "mysql2": "^3.16.2",
+    "nodemailer": "^8.0.0",
+    "prisma": "^6.19.2",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/bcrypt": "^6.0.0",
+    "@types/node": "^25.2.0",
+    "@types/nodemailer": "^7.0.9",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  }
+}
