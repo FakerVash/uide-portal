@@ -8,3 +8,4 @@ export * from './resena.js';
 export * from './usuario-habilidad.js';
 export * from './pedido.js';
 export * from './auth.js';
+export * from './auditoria.js';

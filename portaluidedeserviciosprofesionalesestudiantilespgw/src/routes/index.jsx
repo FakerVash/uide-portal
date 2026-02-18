@@ -7,18 +7,23 @@ import { ProtectedRoute } from './ProtectedRoute';
 import { Login } from '../pages/Login';
 import { Register } from '../pages/Register';
 import LoadingVerification from '../pages/LoadingVerification';
+import { LandingPage } from '../pages/LandingPage';
 import { Dashboard } from '../pages/Dashboard';
 import { Profile } from '../pages/Profile';
+import { CarreraDetails } from '../pages/CarreraDetails';
+import { Carreras } from '../pages/Carreras';
 
 import { CreateService } from '../pages/CreateService';
 import { MyServices } from '../pages/MyServices';
 import { JobBoard } from '../pages/JobBoard';
 import { CreateRequirement } from '../pages/CreateRequirement';
 import { MyRequirements } from '../pages/MyRequirements';
+import { MyOrders } from '../pages/MyOrders';
 
 
 import { AdminUsers } from '../pages/AdminUsers';
 import { AdminServices } from '../pages/AdminServices';
+import AdminCarreras from '../pages/AdminCarreras';
 import { ServiceDetails } from '../pages/ServiceDetails';
 import { UpdateService } from '../pages/UpdateService';
 
@@ -33,7 +38,8 @@ export const AppRoutes = () => {
             <Route path="/verifying" element={<LoadingVerification />} />
 
             {/* Rutas Públicas */}
-            <Route path="/" element={<Dashboard />} />
+            <Route path="/" element={<LandingPage />} />
+            <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/service/:id" element={<ServiceDetails />} />
 
 
@@ -47,6 +53,9 @@ export const AppRoutes = () => {
                 }
             />
             <Route path="/perfil/:id" element={<Profile />} />
+
+            <Route path="/carrera/:id" element={<CarreraDetails />} />
+            <Route path="/carreras" element={<Carreras />} />
 
 
 
@@ -92,7 +101,7 @@ export const AppRoutes = () => {
             <Route
                 path="/publicar-requerimiento"
                 element={
-                    <ProtectedRoute allowedRoles={['cliente']}>
+                    <ProtectedRoute allowedRoles={['cliente', 'estudiante']}>
                         <CreateRequirement />
                     </ProtectedRoute>
                 }
@@ -100,8 +109,17 @@ export const AppRoutes = () => {
             <Route
                 path="/mis-requerimientos"
                 element={
-                    <ProtectedRoute allowedRoles={['cliente']}>
+                    <ProtectedRoute allowedRoles={['cliente', 'estudiante']}>
                         <MyRequirements />
+                    </ProtectedRoute>
+                }
+            />
+
+            <Route
+                path="/mis-pedidos"
+                element={
+                    <ProtectedRoute allowedRoles={['cliente', 'estudiante']}>
+                        <MyOrders />
                     </ProtectedRoute>
                 }
             />
@@ -123,6 +141,15 @@ export const AppRoutes = () => {
                     </ProtectedRoute>
                 }
             />
+            <Route
+                path="/admin/carreras"
+                element={
+                    <ProtectedRoute allowedRoles={['admin']}>
+                        <AdminCarreras />
+                    </ProtectedRoute>
+                }
+            />
+
 
 
 

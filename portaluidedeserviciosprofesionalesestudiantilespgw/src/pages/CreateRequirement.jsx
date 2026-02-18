@@ -91,91 +91,133 @@ export const CreateRequirement = () => {
         }
     };
 
-    if (!user || user.role !== 'cliente') {
-        return <Box sx={{ p: 4 }}>Acceso restringido a clientes.</Box>;
+    if (!user || (user.role !== 'cliente' && user.role !== 'estudiante')) {
+        return <Box sx={{ p: 4 }}>Acceso restringido.</Box>;
     }
 
     return (
-        <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: '#f9fafb' }}>
+        <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: (theme) => theme.palette.background.default }}>
             <Sidebar />
             <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', ml: { xs: 0, md: '240px' } }}>
                 <Header />
-                <Box component="main" sx={{ flex: 1, p: { xs: 2, md: 2.5 }, display: 'flex', justifyContent: 'center', minHeight: '100%', backgroundImage: 'linear-gradient(rgba(249, 250, 251, 0.9), rgba(249, 250, 251, 0.9)), url(/uide-watermark.png)', backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' }}>
-                    <Box sx={{ width: '100%', maxWidth: 1280, flexShrink: 0 }}>
-                    <Typography variant="h4" sx={{ fontWeight: 800, color: '#111827', mb: 1.5 }}>
-                        {editMode ? 'Editar Requerimiento' : 'Publicar Nuevo Requerimiento'}
-                    </Typography>
+                <Box component="main" sx={{ flex: 1, p: { xs: 2, md: 2.5 }, display: 'flex', justifyContent: 'center', minHeight: '100%', backgroundImage: (theme) => theme.palette.mode === 'dark' ? 'none' : 'linear-gradient(rgba(249, 250, 251, 0.9), rgba(249, 250, 251, 0.9)), url(/uide-watermark.png)', backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' }}>
+                    <Box sx={{ width: '100%', maxWidth: 800, flexShrink: 0 }}>
+                        <Typography variant="h4" sx={{ fontWeight: 800, color: (theme) => theme.palette.text.primary, mb: 3 }}>
+                            {editMode ? 'Editar Requerimiento' : 'Publicar Nuevo Requerimiento'}
+                        </Typography>
 
-                    <Paper component="form" onSubmit={handleSubmit} sx={{ p: 2.5, borderRadius: 3, border: '1px solid #e5e7eb' }}>
-                        <TextField
-                            fullWidth
-                            label="Título del Requerimiento"
-                            placeholder="Ej: Necesito ayuda con diseño de logo"
-                            value={formData.titulo}
-                            onChange={(e) => setFormData({ ...formData, titulo: e.target.value })}
-                            sx={{ mb: 1.5 }}
-                            required
-                        />
-
-                        <FormControl fullWidth sx={{ mb: 1.5 }}>
-                            <InputLabel>Carrera Relacionada</InputLabel>
-                            <Select
-                                value={formData.id_carrera}
-                                label="Carrera Relacionada"
-                                onChange={(e) => setFormData({ ...formData, id_carrera: e.target.value })}
+                        <Paper
+                            component="form"
+                            onSubmit={handleSubmit}
+                            elevation={0}
+                            sx={{
+                                p: 4,
+                                borderRadius: 3,
+                                border: (theme) => `1px solid ${theme.palette.divider}`,
+                                bgcolor: (theme) => theme.palette.background.paper,
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: 3
+                            }}
+                        >
+                            <TextField
+                                fullWidth
+                                label="Título del Requerimiento"
+                                placeholder="Ej: Necesito ayuda con diseño de logo"
+                                value={formData.titulo}
+                                onChange={(e) => setFormData({ ...formData, titulo: e.target.value })}
                                 required
-                            >
-                                {carreras.map((carrera) => (
-                                    <MenuItem key={carrera.id_carrera} value={carrera.id_carrera}>
-                                        {carrera.nombre_carrera}
-                                    </MenuItem>
-                                ))}
-                            </Select>
-                        </FormControl>
-
-                        <TextField
-                            fullWidth
-                            multiline
-                            rows={4}
-                            label="Descripción Detallada"
-                            placeholder="Describe lo que necesitas..."
-                            value={formData.descripcion}
-                            onChange={(e) => setFormData({ ...formData, descripcion: e.target.value })}
-                            sx={{ mb: 1.5 }}
-                            required
-                        />
-
-
-
-                        <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
-                            <Button
-                                variant="outlined"
-                                onClick={() => navigate(-1)}
-                                sx={{ borderRadius: 2, textTransform: 'none' }}
-                            >
-                                Cancelar
-                            </Button>
-                            <Button
-                                type="submit"
-                                variant="contained"
-                                disabled={loading}
-                                sx={{
-                                    bgcolor: '#111827',
-                                    color: 'white',
-                                    borderRadius: 2,
-                                    textTransform: 'none',
-                                    px: 4,
-                                    '&:hover': { bgcolor: '#374151' }
+                                InputProps={{
+                                    sx: { borderRadius: 2 }
                                 }}
-                            >
-                                {loading
-                                    ? <CircularProgress size={24} color="inherit" />
-                                    : editMode
-                                        ? 'Guardar Cambios'
-                                        : 'Publicar Requerimiento'}
-                            </Button>
-                        </Box>
-                    </Paper>
+                            />
+
+                            <FormControl fullWidth>
+                                <InputLabel>Carrera Relacionada</InputLabel>
+                                <Select
+                                    value={formData.id_carrera}
+                                    label="Carrera Relacionada"
+                                    onChange={(e) => setFormData({ ...formData, id_carrera: e.target.value })}
+                                    required
+                                    sx={{ borderRadius: 2 }}
+                                >
+                                    {carreras.map((carrera) => (
+                                        <MenuItem key={carrera.id_carrera} value={carrera.id_carrera}>
+                                            {carrera.nombre_carrera}
+                                        </MenuItem>
+                                    ))}
+                                </Select>
+                            </FormControl>
+
+                            <TextField
+                                fullWidth
+                                multiline
+                                rows={6}
+                                label="Descripción Detallada"
+                                placeholder="Describe lo que necesitas con el mayor detalle posible..."
+                                value={formData.descripcion}
+                                onChange={(e) => setFormData({ ...formData, descripcion: e.target.value })}
+                                required
+                                InputProps={{
+                                    sx: { borderRadius: 2 }
+                                }}
+                            />
+
+                            <TextField
+                                fullWidth
+                                label="Presupuesto Estimado (Opcional)"
+                                placeholder="Ej: 50.00"
+                                type="number"
+                                value={formData.presupuesto}
+                                onChange={(e) => setFormData({ ...formData, presupuesto: e.target.value })}
+                                InputProps={{
+                                    startAdornment: <Typography sx={{ mr: 1, color: 'text.secondary' }}>$</Typography>,
+                                    sx: { borderRadius: 2 }
+                                }}
+                            />
+
+                            <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end', mt: 1 }}>
+                                <Button
+                                    variant="outlined"
+                                    onClick={() => navigate(-1)}
+                                    sx={{
+                                        borderRadius: 2,
+                                        textTransform: 'none',
+                                        borderColor: (theme) => theme.palette.divider,
+                                        color: (theme) => theme.palette.text.primary,
+                                        '&:hover': {
+                                            borderColor: (theme) => theme.palette.text.primary,
+                                            bgcolor: (theme) => theme.palette.action.hover
+                                        }
+                                    }}
+                                >
+                                    Cancelar
+                                </Button>
+                                <Button
+                                    type="submit"
+                                    variant="contained"
+                                    disabled={loading}
+                                    sx={{
+                                        bgcolor: (theme) => theme.palette.mode === 'dark' ? theme.palette.primary.main : '#111827',
+                                        color: 'white',
+                                        borderRadius: 2,
+                                        textTransform: 'none',
+                                        px: 4,
+                                        py: 1,
+                                        fontWeight: 600,
+                                        '&:hover': {
+                                            bgcolor: (theme) => theme.palette.mode === 'dark' ? theme.palette.primary.dark : '#374151'
+                                        }
+                                    }}
+                                >
+                                    {loading
+                                        ? <CircularProgress size={24} color="inherit" />
+                                        : editMode
+                                            ? 'Guardar Cambios'
+                                            : 'Publicar Requerimiento'}
+                                </Button>
+                            </Box>
+                        </Paper>
                     </Box>
                 </Box>
             </Box>

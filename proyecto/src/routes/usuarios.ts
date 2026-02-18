@@ -27,16 +27,8 @@ const usuarioRoutes: FastifyPluginAsync = async (fastify, opts) => {
                 properties: {
                     id: { type: 'integer' }
                 }
-            },
-            response: {
-                200: { $ref: 'Usuario#' },
-                404: {
-                    type: 'object',
-                    properties: {
-                        message: { type: 'string' }
-                    }
-                }
             }
+            // Response schema removed to allow habilidades and servicios fields
         }
     }, UsuarioController.getById);
 
@@ -64,6 +56,18 @@ const usuarioRoutes: FastifyPluginAsync = async (fastify, opts) => {
         }
     }, UsuarioController.updateStatus);
 
+    // PUT /usuarios/:id/admin-update (Admin Only - Career Change)
+    fastify.put('/:id/admin-update', {
+        preHandler: [checkAdmin],
+        schema: {
+            description: 'Actualizar carrera de usuario (Admin)',
+            tags: ['Usuarios'],
+            params: { type: 'object', properties: { id: { type: 'integer' } } },
+            body: { type: 'object', required: ['id_carrera'], properties: { id_carrera: { type: 'integer' } } },
+            response: { 200: { $ref: 'Usuario#' } }
+        }
+    }, UsuarioController.adminUpdate);
+
     // DELETE /usuarios/:id (Admin Only)
     fastify.delete('/:id', {
         preHandler: [checkAdmin],
@@ -82,8 +86,8 @@ const usuarioRoutes: FastifyPluginAsync = async (fastify, opts) => {
             description: 'Editar mi propio perfil (Cliente)',
             tags: ['Usuarios'],
             security: [{ bearerAuth: [] }],
-            body: { $ref: 'UpdateUsuario#' },
-            response: { 200: { $ref: 'Usuario#' } }
+            body: { $ref: 'UpdateUsuario#' }
+            // Response schema removed to allow habilidades field
         }
     }, UsuarioController.updateMe);
 
@@ -93,8 +97,8 @@ const usuarioRoutes: FastifyPluginAsync = async (fastify, opts) => {
         schema: {
             description: 'Obtener mi propio perfil',
             tags: ['Usuarios'],
-            security: [{ bearerAuth: [] }],
-            response: { 200: { $ref: 'Usuario#' } }
+            security: [{ bearerAuth: [] }]
+            // Response schema removed to allow habilidades field
         }
     }, UsuarioController.getMe);
 };

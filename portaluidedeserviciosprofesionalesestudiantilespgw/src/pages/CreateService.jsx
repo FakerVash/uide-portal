@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Box, Container, Paper, TextField, MenuItem, Button, Typography, Grid } from '@mui/material';
+import { Box, Container, Paper, TextField, MenuItem, Button, Typography, Grid, Autocomplete } from '@mui/material';
 import { Sidebar } from '../components/Sidebar';
 import { Header } from '../components/Header';
 import { toast } from 'sonner';
@@ -25,9 +25,29 @@ export const CreateService = () => {
   const fileInputRef = useRef(null);
   const galleryInputRef = useRef(null);
 
+  const deliveryOptions = [
+    '24 horas',
+    '2 días',
+    '3 días',
+    '4 días',
+    '5 días',
+    '6 días',
+    '1 semana',
+    '2 semanas',
+    '3 semanas',
+    '1 mes',
+    'Más de 1 mes'
+  ];
+
   const handleImageUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
+
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+    if (!allowedTypes.includes(file.type)) {
+      toast.error('Solo se permiten imágenes (JPG, PNG, WEBP, GIF)');
+      return;
+    }
 
     if (file.size > 5 * 1024 * 1024) {
       toast.error('La imagen no debe superar los 5MB');
@@ -59,6 +79,14 @@ export const CreateService = () => {
   const handleGalleryUpload = async (e) => {
     const files = Array.from(e.target.files);
     if (files.length === 0) return;
+
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+    // Validar tipos antes de subir nada
+    const invalidFiles = files.filter(file => !allowedTypes.includes(file.type));
+    if (invalidFiles.length > 0) {
+      toast.error('Solo se permiten imágenes (JPG, PNG, WEBP, GIF)');
+      return;
+    }
 
     const newImages = [];
     const toastId = toast.loading('Subiendo imágenes...');
@@ -178,7 +206,7 @@ export const CreateService = () => {
   };
 
   return (
-    <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: '#f9fafb' }}>
+    <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: 'background.default' }}>
       <Sidebar />
       <Box
         sx={{
@@ -193,7 +221,21 @@ export const CreateService = () => {
         <Header />
         <Box
           component="main"
-          sx={{ flex: 1, overflowY: 'auto', p: { xs: 2, md: 3 }, minHeight: '100%', backgroundImage: 'linear-gradient(rgba(249, 250, 251, 0.9), rgba(249, 250, 251, 0.9)), url(/uide-watermark.png)', backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' }}
+          sx={{
+            flex: 1,
+            overflowY: 'auto',
+            p: { xs: 2, md: 3 },
+            minHeight: '100%',
+            backgroundImage: (theme) => {
+              const overlay = theme.palette.mode === 'dark'
+                ? 'linear-gradient(rgba(15, 23, 42, 0.92), rgba(15, 23, 42, 0.92))'
+                : 'linear-gradient(rgba(249, 250, 251, 0.9), rgba(249, 250, 251, 0.9))';
+              return `${overlay}, url(/uide-watermark.png)`;
+            },
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            backgroundRepeat: 'no-repeat'
+          }}
         >
           <Container maxWidth="md">
             <Box sx={{ mb: 5 }}>
@@ -202,16 +244,16 @@ export const CreateService = () => {
                   display: 'inline-flex',
                   p: 1.5,
                   borderRadius: 4,
-                  bgcolor: 'rgba(135, 10, 66, 0.05)',
+                  bgcolor: (theme) => (theme.palette.mode === 'dark' ? 'rgba(135, 10, 66, 0.25)' : 'rgba(135, 10, 66, 0.05)'),
                   mb: 2,
                 }}
               >
-                <AutoAwesomeIcon sx={{ fontSize: '1.5rem', color: '#870a42' }} />
+                <AutoAwesomeIcon sx={{ fontSize: '1.5rem', color: 'primary.main' }} />
               </Box>
-              <Typography variant="h4" sx={{ fontWeight: 900, color: '#111827', mb: 1, letterSpacing: '-0.02em' }}>
+              <Typography variant="h4" sx={{ fontWeight: 900, color: 'text.primary', mb: 1, letterSpacing: '-0.02em' }}>
                 Crear Nuevo Servicio
               </Typography>
-              <Typography variant="body1" sx={{ color: '#6b7280', fontWeight: 500 }}>
+              <Typography variant="body1" sx={{ color: 'text.secondary', fontWeight: 500 }}>
                 Completa la información detallada para atraer a más clientes potenciales.
               </Typography>
             </Box>
@@ -225,11 +267,11 @@ export const CreateService = () => {
             >
               <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                 <Grid container spacing={3}>
-                  <Grid item xs={12}>
+                  <Grid size={{ xs: 12 }}>
                     <Typography
                       variant="caption"
                       sx={{
-                        color: '#374151',
+                        color: 'text.secondary',
                         fontWeight: 700,
                         textTransform: 'uppercase',
                         letterSpacing: '0.1em',
@@ -249,7 +291,6 @@ export const CreateService = () => {
                       InputProps={{
                         sx: {
                           borderRadius: 3,
-                          bgcolor: 'white',
                           fontWeight: 500,
                         },
                       }}
@@ -257,27 +298,27 @@ export const CreateService = () => {
                         '& .MuiOutlinedInput-root': {
                           '& fieldset': {
                             borderWidth: 2,
-                            borderColor: '#e5e7eb',
+                            borderColor: 'divider',
                           },
                           '&:hover fieldset': {
-                            borderColor: '#870a42',
+                            borderColor: 'primary.main',
                           },
                           '&.Mui-focused fieldset': {
-                            borderColor: '#870a42',
+                            borderColor: 'primary.main',
                           },
                           '&.Mui-focused': {
-                            boxShadow: '0 0 0 4px rgba(135, 10, 66, 0.05)',
+                            boxShadow: (theme) => `0 0 0 4px ${theme.palette.mode === 'dark' ? 'rgba(135, 10, 66, 0.35)' : 'rgba(135, 10, 66, 0.12)'}`,
                           },
                         },
                       }}
                     />
                   </Grid>
 
-                  <Grid item xs={12} md={6}>
+                  <Grid size={{ xs: 12, md: 6 }}>
                     <Typography
                       variant="caption"
                       sx={{
-                        color: '#374151',
+                        color: 'text.secondary',
                         fontWeight: 700,
                         textTransform: 'uppercase',
                         letterSpacing: '0.1em',
@@ -287,55 +328,56 @@ export const CreateService = () => {
                     >
                       Categoría
                     </Typography>
-                    <TextField
+                    <Autocomplete
                       fullWidth
-                      select
-                      name="category"
-                      value={formData.category}
-                      onChange={handleChange}
-                      required
-                      placeholder="Selecciona una categoría"
-                      InputProps={{
-                        sx: {
-                          borderRadius: 3,
-                          bgcolor: 'white',
-                          fontWeight: 500,
-                        },
+                      options={categories}
+                      getOptionLabel={(option) => option.nombre_categoria}
+                      value={categories.find(c => c.nombre_categoria === formData.category) || null}
+                      onChange={(event, newValue) => {
+                        setFormData({
+                          ...formData,
+                          category: newValue ? newValue.nombre_categoria : ''
+                        });
                       }}
-                      sx={{
-                        '& .MuiOutlinedInput-root': {
-                          '& fieldset': {
-                            borderWidth: 2,
-                            borderColor: '#e5e7eb',
-                          },
-                          '&:hover fieldset': {
-                            borderColor: '#870a42',
-                          },
-                          '&.Mui-focused fieldset': {
-                            borderColor: '#870a42',
-                          },
-                          '&.Mui-focused': {
-                            boxShadow: '0 0 0 4px rgba(135, 10, 66, 0.05)',
-                          },
-                        },
-                      }}
-                    >
-                      <MenuItem value="" disabled>
-                        Selecciona una categoría
-                      </MenuItem>
-                      {categories.map((category) => (
-                        <MenuItem key={category.id_categoria} value={category.nombre_categoria}>
-                          {category.nombre_categoria}
-                        </MenuItem>
-                      ))}
-                    </TextField>
+                      renderInput={(params) => (
+                        <TextField
+                          {...params}
+                          placeholder="Selecciona o busca una categoría"
+                          required
+                          InputProps={{
+                            ...params.InputProps,
+                            sx: {
+                              borderRadius: 3,
+                              fontWeight: 500,
+                            },
+                          }}
+                          sx={{
+                            '& .MuiOutlinedInput-root': {
+                              '& fieldset': {
+                                borderWidth: 2,
+                                borderColor: 'divider',
+                              },
+                              '&:hover fieldset': {
+                                borderColor: 'primary.main',
+                              },
+                              '&.Mui-focused fieldset': {
+                                borderColor: 'primary.main',
+                              },
+                              '&.Mui-focused': {
+                                boxShadow: (theme) => `0 0 0 4px ${theme.palette.mode === 'dark' ? 'rgba(135, 10, 66, 0.35)' : 'rgba(135, 10, 66, 0.12)'}`,
+                              },
+                            },
+                          }}
+                        />
+                      )}
+                    />
                   </Grid>
 
-                  <Grid item xs={12} md={6}>
+                  <Grid size={{ xs: 12, md: 6 }}>
                     <Typography
                       variant="caption"
                       sx={{
-                        color: '#374151',
+                        color: 'text.secondary',
                         fontWeight: 700,
                         textTransform: 'uppercase',
                         letterSpacing: '0.1em',
@@ -357,7 +399,6 @@ export const CreateService = () => {
                       InputProps={{
                         sx: {
                           borderRadius: 3,
-                          bgcolor: 'white',
                           fontWeight: 500,
                         },
                       }}
@@ -365,27 +406,27 @@ export const CreateService = () => {
                         '& .MuiOutlinedInput-root': {
                           '& fieldset': {
                             borderWidth: 2,
-                            borderColor: '#e5e7eb',
+                            borderColor: 'divider',
                           },
                           '&:hover fieldset': {
-                            borderColor: '#870a42',
+                            borderColor: 'primary.main',
                           },
                           '&.Mui-focused fieldset': {
-                            borderColor: '#870a42',
+                            borderColor: 'primary.main',
                           },
                           '&.Mui-focused': {
-                            boxShadow: '0 0 0 4px rgba(135, 10, 66, 0.05)',
+                            boxShadow: (theme) => `0 0 0 4px ${theme.palette.mode === 'dark' ? 'rgba(135, 10, 66, 0.35)' : 'rgba(135, 10, 66, 0.12)'}`,
                           },
                         },
                       }}
-                      />
+                    />
                   </Grid>
 
-                  <Grid item xs={12} md={6}>
+                  <Grid size={{ xs: 12, md: 6 }}>
                     <Typography
                       variant="caption"
                       sx={{
-                        color: '#374151',
+                        color: 'text.secondary',
                         fontWeight: 700,
                         textTransform: 'uppercase',
                         letterSpacing: '0.1em',
@@ -397,15 +438,15 @@ export const CreateService = () => {
                     </Typography>
                     <TextField
                       fullWidth
+                      select
                       name="tiempo_entrega"
-                      placeholder="Ej: 1-3 días, 1 semana, 24 horas"
+                      placeholder="Selecciona el tiempo de entrega"
                       value={formData.tiempo_entrega}
                       onChange={handleChange}
                       required
                       InputProps={{
                         sx: {
                           borderRadius: 3,
-                          bgcolor: 'white',
                           fontWeight: 500,
                         },
                       }}
@@ -413,20 +454,27 @@ export const CreateService = () => {
                         '& .MuiOutlinedInput-root': {
                           '& fieldset': {
                             borderWidth: 2,
-                            borderColor: '#e5e7eb',
+                            borderColor: 'divider',
                           },
                           '&:hover fieldset': {
-                            borderColor: '#870a42',
+                            borderColor: 'primary.main',
                           },
                           '&.Mui-focused fieldset': {
-                            borderColor: '#870a42',
+                            borderColor: 'primary.main',
                           },
                           '&.Mui-focused': {
-                            boxShadow: '0 0 0 4px rgba(135, 10, 66, 0.05)',
+                            boxShadow: (theme) => `0 0 0 4px ${theme.palette.mode === 'dark' ? 'rgba(135, 10, 66, 0.35)' : 'rgba(135, 10, 66, 0.12)'}`,
                           },
                         },
                       }}
-                    />
+                    >
+                      <MenuItem value="" disabled>Selecciona una opción</MenuItem>
+                      {deliveryOptions.map((option) => (
+                        <MenuItem key={option} value={option}>
+                          {option}
+                        </MenuItem>
+                      ))}
+                    </TextField>
                   </Grid>
                 </Grid>
 
@@ -434,7 +482,7 @@ export const CreateService = () => {
                   <Typography
                     variant="caption"
                     sx={{
-                      color: '#374151',
+                      color: 'text.secondary',
                       fontWeight: 700,
                       textTransform: 'uppercase',
                       letterSpacing: '0.1em',
@@ -456,7 +504,6 @@ export const CreateService = () => {
                     InputProps={{
                       sx: {
                         borderRadius: 3,
-                        bgcolor: 'white',
                         fontWeight: 500,
                       },
                     }}
@@ -464,16 +511,16 @@ export const CreateService = () => {
                       '& .MuiOutlinedInput-root': {
                         '& fieldset': {
                           borderWidth: 2,
-                          borderColor: '#e5e7eb',
+                          borderColor: 'divider',
                         },
                         '&:hover fieldset': {
-                          borderColor: '#870a42',
+                          borderColor: 'primary.main',
                         },
                         '&.Mui-focused fieldset': {
-                          borderColor: '#870a42',
+                          borderColor: 'primary.main',
                         },
                         '&.Mui-focused': {
-                          boxShadow: '0 0 0 4px rgba(135, 10, 66, 0.05)',
+                          boxShadow: (theme) => `0 0 0 4px ${theme.palette.mode === 'dark' ? 'rgba(135, 10, 66, 0.35)' : 'rgba(135, 10, 66, 0.12)'}`,
                         },
                       },
                     }}
@@ -484,7 +531,7 @@ export const CreateService = () => {
                   <Typography
                     variant="caption"
                     sx={{
-                      color: '#374151',
+                      color: 'text.secondary',
                       fontWeight: 700,
                       textTransform: 'uppercase',
                       letterSpacing: '0.1em',
@@ -504,7 +551,7 @@ export const CreateService = () => {
                   <Box
                     onClick={() => fileInputRef.current.click()}
                     sx={{
-                      border: '2px dashed #e5e7eb',
+                      border: (theme) => `2px dashed ${theme.palette.divider}`,
                       borderRadius: 4,
                       p: formData.imagen_portada ? 1 : 5,
                       textAlign: 'center',
@@ -513,13 +560,13 @@ export const CreateService = () => {
                       overflow: 'hidden',
                       position: 'relative',
                       '&:hover': {
-                        borderColor: '#870a42',
-                        bgcolor: 'rgba(135, 10, 66, 0.05)',
+                        borderColor: 'primary.main',
+                        bgcolor: (theme) => (theme.palette.mode === 'dark' ? 'rgba(135, 10, 66, 0.18)' : 'rgba(135, 10, 66, 0.05)'),
                         '& .upload-icon-bg': {
-                          bgcolor: 'white',
+                          bgcolor: 'background.paper',
                         },
                         '& .upload-icon': {
-                          color: '#870a42',
+                          color: 'primary.main',
                         },
                       },
                     }}
@@ -540,7 +587,7 @@ export const CreateService = () => {
                         <Box
                           className="upload-icon-bg"
                           sx={{
-                            bgcolor: '#f9fafb',
+                            bgcolor: 'background.paper',
                             width: 64,
                             height: 64,
                             borderRadius: 4,
@@ -555,15 +602,16 @@ export const CreateService = () => {
                             className="upload-icon"
                             sx={{
                               fontSize: '2rem',
-                              color: '#9ca3af',
+                              color: 'text.secondary',
+                              opacity: 0.55,
                               transition: 'color 0.2s',
                             }}
                           />
                         </Box>
-                        <Typography variant="body1" sx={{ fontWeight: 700, color: '#111827', mb: 0.5 }}>
+                        <Typography variant="body1" sx={{ fontWeight: 700, color: 'text.primary', mb: 0.5 }}>
                           Haz clic para subir una imagen
                         </Typography>
-                        <Typography variant="body2" sx={{ color: '#9ca3af', fontWeight: 500 }}>
+                        <Typography variant="body2" sx={{ color: 'text.secondary', fontWeight: 500 }}>
                           Formatos sugeridos: PNG, JPG (Máx. 5MB)
                         </Typography>
                       </>
@@ -575,7 +623,7 @@ export const CreateService = () => {
                   <Typography
                     variant="caption"
                     sx={{
-                      color: '#374151',
+                      color: 'text.secondary',
                       fontWeight: 700,
                       textTransform: 'uppercase',
                       letterSpacing: '0.1em',
@@ -596,7 +644,7 @@ export const CreateService = () => {
                   <Box
                     onClick={() => galleryInputRef.current.click()}
                     sx={{
-                      border: '2px dashed #e5e7eb',
+                      border: (theme) => `2px dashed ${theme.palette.divider}`,
                       borderRadius: 4,
                       p: 3,
                       textAlign: 'center',
@@ -604,12 +652,12 @@ export const CreateService = () => {
                       transition: 'all 0.2s',
                       mb: 2,
                       '&:hover': {
-                        borderColor: '#870a42',
-                        bgcolor: 'rgba(135, 10, 66, 0.05)',
+                        borderColor: 'primary.main',
+                        bgcolor: (theme) => (theme.palette.mode === 'dark' ? 'rgba(135, 10, 66, 0.18)' : 'rgba(135, 10, 66, 0.05)'),
                       },
                     }}
                   >
-                    <Typography variant="body2" sx={{ color: '#6b7280', fontWeight: 600 }}>
+                    <Typography variant="body2" sx={{ color: 'text.secondary', fontWeight: 600 }}>
                       + Agregar imágenes a la galería
                     </Typography>
                   </Box>
@@ -617,7 +665,7 @@ export const CreateService = () => {
                   {formData.imagenes.length > 0 && (
                     <Grid container spacing={2}>
                       {formData.imagenes.map((img, index) => (
-                        <Grid item xs={6} sm={4} md={3} key={index}>
+                        <Grid size={{ xs: 6, sm: 4, md: 3 }} key={index}>
                           <Box sx={{ position: 'relative', paddingTop: '100%', borderRadius: 2, overflow: 'hidden' }}>
                             <img src={img} alt={`Galeria ${index}`} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
                             <Box
@@ -635,7 +683,7 @@ export const CreateService = () => {
                                 alignItems: 'center',
                                 justifyContent: 'center',
                                 cursor: 'pointer',
-                                '&:hover': { bgcolor: 'red' }
+                                '&:hover': { bgcolor: 'error.main' }
                               }}
                             >
                               &times;
@@ -647,7 +695,7 @@ export const CreateService = () => {
                   )}
                 </Box>
 
-                <Box sx={{ pt: 4, borderTop: '1px solid #f3f4f6', display: 'flex', gap: 2 }}>
+                <Box sx={{ pt: 4, borderTop: (theme) => `1px solid ${theme.palette.divider}`, display: 'flex', gap: 2 }}>
                   <Button
                     type="button"
                     variant="outlined"
@@ -657,13 +705,13 @@ export const CreateService = () => {
                       flex: 1,
                       borderRadius: 3,
                       fontWeight: 700,
-                      color: '#6b7280',
-                      borderColor: '#e5e7eb',
+                      color: 'text.secondary',
+                      borderColor: 'divider',
                       textTransform: 'none',
                       py: 1.5,
                       '&:hover': {
-                        bgcolor: '#f9fafb',
-                        borderColor: '#e5e7eb',
+                        bgcolor: 'action.hover',
+                        borderColor: 'divider',
                       },
                     }}
                   >
@@ -677,12 +725,12 @@ export const CreateService = () => {
                       flex: 1,
                       borderRadius: 3,
                       fontWeight: 900,
-                      bgcolor: '#870a42',
+                      bgcolor: 'primary.main',
                       textTransform: 'none',
                       py: 1.5,
                       boxShadow: '0 10px 15px -3px rgba(135, 10, 66, 0.2)',
                       '&:hover': {
-                        bgcolor: '#6b0835',
+                        bgcolor: 'primary.dark',
                       },
                       '&:active': {
                         transform: 'scale(0.95)',

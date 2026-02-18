@@ -10,6 +10,7 @@ export interface ServicioDTO {
     imagenes?: string[];
     fecha_publicacion?: Date;
     activo?: boolean;
+    archivado?: boolean;
 }
 
 export const ServicioSchema = {
@@ -30,7 +31,9 @@ export const ServicioSchema = {
             items: { type: 'string' }
         },
         fecha_publicacion: { type: 'string', format: 'date-time' },
+        calificacion_promedio: { type: 'number', nullable: true },
         activo: { type: 'boolean', default: true },
+        archivado: { type: 'boolean', default: false },
         categoria: {
             type: 'object',
             properties: {

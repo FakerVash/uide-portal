@@ -164,6 +164,143 @@ server.tool(
     }
 );
 
+// === TOOLS PARA CLIENTES (Mis Compras) ===
+
+server.tool(
+    "mis_compras",
+    "Ver mis pedidos realizados como cliente (Requiere autenticación)",
+    {
+        correo: z.string().email(),
+        codigo: z.string().describe("Código recibido por correo")
+    },
+    async ({ correo, codigo }) => {
+        try {
+            const currentUser = await autenticarUsuario(correo, codigo);
+
+            const [rows] = await pool.execute(`
+                SELECT p.id_pedido, p.fecha_pedido, p.estado, p.monto_total, 
+                       s.titulo as servicio, u.nombre as prestador, u.email as contacto_prestador
+                FROM pedidos p
+                JOIN servicios s ON p.id_servicio = s.id_servicio
+                JOIN usuarios u ON s.id_usuario = u.id_usuario
+                WHERE p.id_cliente = ?
+                ORDER BY p.fecha_pedido DESC
+            `, [currentUser.id]) as [any[], any];
+
+            return {
+                content: [{
+                    type: "text" as const,
+                    text: JSON.stringify({
+                        exito: true,
+                        rol: "CLIENTE",
+                        total_pedidos: rows.length,
+                        pedidos: rows
+                    }, null, 2)
+                }]
+            };
+        } catch (error: any) {
+            return { isError: true, content: [{ type: "text", text: error.message }] };
+        }
+    }
+);
+
+// === TOOLS PARA ESTUDIANTES (Mis Ventas) ===
+
+server.tool(
+    "mis_ventas",
+    "Ver pedidos recibidos de mis servicios (Requiere autenticación)",
+    {
+        correo: z.string().email(),
+        codigo: z.string().describe("Código recibido por correo"),
+        estado: z.enum(['PENDIENTE', 'EN_PROCESO', 'COMPLETADO', 'CANCELADO']).optional()
+    },
+    async ({ correo, codigo, estado }) => {
+        try {
+            const currentUser = await autenticarUsuario(correo, codigo);
+
+            let query = `
+                SELECT p.id_pedido, p.fecha_pedido, p.estado, p.monto_total, 
+                       s.titulo as servicio, c.nombre as cliente, c.email as contacto_cliente
+                FROM pedidos p
+                JOIN servicios s ON p.id_servicio = s.id_servicio
+                JOIN usuarios c ON p.id_cliente = c.id_usuario
+                WHERE s.id_usuario = ?
+            `;
+
+            const params: any[] = [currentUser.id];
+
+            if (estado) {
+                query += " AND p.estado = ?";
+                params.push(estado);
+            }
+
+            query += " ORDER BY p.fecha_pedido DESC";
+
+            const [rows] = await pool.execute(query, params) as [any[], any];
+
+            return {
+                content: [{
+                    type: "text" as const,
+                    text: JSON.stringify({
+                        exito: true,
+                        rol: "ESTUDIANTE",
+                        total_ventas: rows.length,
+                        ventas: rows
+                    }, null, 2)
+                }]
+            };
+        } catch (error: any) {
+            return { isError: true, content: [{ type: "text", text: error.message }] };
+        }
+    }
+);
+
+server.tool(
+    "actualizar_estado_pedido",
+    "Cambiar estado de un pedido (Solo Estudiantes)",
+    {
+        correo: z.string().email(),
+        codigo: z.string().describe("Código recibido por correo"),
+        id_pedido: z.number(),
+        nuevo_estado: z.enum(['PENDIENTE', 'EN_PROCESO', 'COMPLETADO', 'CANCELADO'])
+    },
+    async ({ correo, codigo, id_pedido, nuevo_estado }) => {
+        try {
+            const currentUser = await autenticarUsuario(correo, codigo);
+
+            // Verificar que el pedido pertenece a un servicio del usuario
+            const [pedido] = await pool.execute(`
+                SELECT p.id_pedido 
+                FROM pedidos p
+                JOIN servicios s ON p.id_servicio = s.id_servicio
+                WHERE p.id_pedido = ? AND s.id_usuario = ?
+            `, [id_pedido, currentUser.id]) as [any[], any];
+
+            if (pedido.length === 0) {
+                throw new Error("Pedido no encontrado o no tienes permiso para modificarlo.");
+            }
+
+            // Actualizar estado
+            await pool.execute(
+                'UPDATE pedidos SET estado = ? WHERE id_pedido = ?',
+                [nuevo_estado, id_pedido]
+            );
+
+            return {
+                content: [{
+                    type: "text" as const,
+                    text: JSON.stringify({
+                        exito: true,
+                        mensaje: `Pedido #${id_pedido} actualizado a ${nuevo_estado}`
+                    }, null, 2)
+                }]
+            };
+        } catch (error: any) {
+            return { isError: true, content: [{ type: "text", text: error.message }] };
+        }
+    }
+);
+
 // === TOOLS PÚBLICOS ===
 
 server.tool(

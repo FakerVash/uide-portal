@@ -31,8 +31,8 @@ export const ServiceCard = ({ service, onAddToCart }) => {
         <button
           onClick={() => toggleFavorite(service.id)}
           className={`absolute top-4 right-4 w-10 h-10 rounded-full flex items-center justify-center transition-all ${isFavorite
-              ? 'bg-red-500 text-white'
-              : 'bg-white/90 text-gray-700 hover:bg-white'
+            ? 'bg-red-500 text-white'
+            : 'bg-white/90 text-gray-700 hover:bg-white'
             }`}
         >
           <Heart className={`w-5 h-5 ${isFavorite ? 'fill-current' : ''}`} />
@@ -62,18 +62,10 @@ export const ServiceCard = ({ service, onAddToCart }) => {
         {/* Rating */}
         <div className="flex items-center gap-2 mb-4">
           <div className="flex items-center gap-1">
-            {[...Array(5)].map((_, i) => (
-              <Star
-                key={i}
-                className={`w-4 h-4 ${i < Math.floor(service.rating)
-                    ? 'fill-amber-400 text-amber-400'
-                    : 'text-gray-300'
-                  }`}
-              />
-            ))}
+            <Star className={`w-4 h-4 ${(service.reviews > 0) ? 'fill-amber-400 text-amber-400' : 'text-gray-300'}`} />
           </div>
           <span className="font-semibold text-gray-900 dark:text-gray-100">
-            {service.rating.toFixed(1)}
+            {(service.reviews > 0) ? service.rating.toFixed(1) : 'Nuevo'}
           </span>
           <span className="text-sm text-gray-500">({service.reviews})</span>
         </div>

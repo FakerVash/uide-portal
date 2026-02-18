@@ -1,5 +1,6 @@
 import { FastifyReply, FastifyRequest } from 'fastify';
 import { ServicioDTO } from '../models/servicio.js';
+import { AuditService } from '../services/audit.service.js';
 
 export const ServicioController = {
     async getById(request: FastifyRequest, reply: FastifyReply) {
@@ -48,24 +49,63 @@ export const ServicioController = {
         // Transform imagenes to URL array
         const imagenesUrls = (servicio as any).imagenes?.map((img: any) => img.url) || [];
 
+        // Calculate Average Rating
+        const numResenas = (servicio as any)._count?.resenas || 0;
+        const promedioServicio = numResenas > 0
+            ? (servicio as any).resenas.reduce((sum: number, r: any) => sum + Number(r.calificacion), 0) / numResenas
+            : null;
+
+        const rating = promedioServicio ?? (servicio.usuario?.calificacion_promedio ? Number(servicio.usuario.calificacion_promedio) : null);
+
+        const { resenas, ...rest } = servicio as any;
+
         return reply.send({
-            ...servicio,
-            imagenes: imagenesUrls
+            ...rest,
+            resenas,
+            imagenes: imagenesUrls,
+            calificacion_promedio: rating !== null ? parseFloat(rating.toFixed(2)) : null
         });
     },
 
     async getAll(request: FastifyRequest, reply: FastifyReply) {
-        const { categoria, buscar } = request.query as { categoria?: string, buscar?: string };
+        const { categoria, buscar, carrera, mis_servicios, ver_archivados } = request.query as {
+            categoria?: string,
+            buscar?: string,
+            carrera?: string,
+            mis_servicios?: string,
+            ver_archivados?: string
+        };
+
+        const where: any = { activo: true };
+
+        // Filtrar por archivado (por defecto solo no archivados)
+        if (ver_archivados !== 'true') {
+            where.archivado = false;
+        }
+
+        if (categoria) {
+            where.id_categoria = parseInt(categoria);
+        }
+
+        if (carrera) {
+            where.usuario = { id_carrera: parseInt(carrera) };
+        }
+
+        if (buscar) {
+            where.OR = [
+                { titulo: { contains: buscar } },
+                { descripcion: { contains: buscar } }
+            ];
+        }
+
+        // Si es "mis servicios", filtrar por el usuario actual
+        if (mis_servicios === 'true' && request.user) {
+            const user = request.user as { id_usuario: number };
+            where.id_usuario = user.id_usuario;
+        }
 
         const servicios = await request.server.prisma.servicio.findMany({
-            where: {
-                activo: true,
-                id_categoria: categoria ? parseInt(categoria) : undefined,
-                OR: buscar ? [
-                    { titulo: { contains: buscar } },
-                    { descripcion: { contains: buscar } }
-                ] : undefined
-            },
+            where,
             include: {
                 usuario: { select: { nombre: true, apellido: true, calificacion_promedio: true } },
                 categoria: true,
@@ -77,12 +117,39 @@ export const ServicioController = {
         return servicios.map(s => {
             const numResenas = s._count.resenas;
             const promedioServicio = numResenas > 0
-                ? s.resenas.reduce((sum, r) => sum + r.calificacion, 0) / numResenas
+                ? s.resenas.reduce((sum, r) => sum + Number(r.calificacion), 0) / numResenas
                 : null;
             const rating = promedioServicio ?? (s.usuario?.calificacion_promedio ? Number(s.usuario.calificacion_promedio) : null);
             const { resenas, ...rest } = s;
-            return { ...rest, calificacion_promedio: rating, _count: s._count };
+            return {
+                ...rest,
+                archivado: s.archivado, // Ensure this is explicitly passed
+                calificacion_promedio: rating !== null ? parseFloat(rating.toFixed(2)) : null,
+                _count: s._count
+            };
         });
+    },
+
+    // Archivar / Desarchivar servicio (Dueño)
+    async archive(request: FastifyRequest, reply: FastifyReply) {
+        const { id } = request.params as { id: string };
+        const user = request.user as { id_usuario: number };
+        const { archivado } = request.body as { archivado?: boolean };
+
+        const servicio = await request.server.prisma.servicio.findUnique({
+            where: { id_servicio: parseInt(id) }
+        });
+
+        if (!servicio || servicio.id_usuario !== user.id_usuario) {
+            return reply.status(403).send({ message: 'No autorizado para archivar este servicio' });
+        }
+
+        const updated = await request.server.prisma.servicio.update({
+            where: { id_servicio: parseInt(id) },
+            data: { archivado: archivado ?? true }
+        });
+
+        return reply.send(updated);
     },
 
     async create(request: FastifyRequest, reply: FastifyReply) {
@@ -102,6 +169,16 @@ export const ServicioController = {
             },
             include: { imagenes: true }
         });
+
+        // Registrar Auditoría
+        await AuditService.log(
+            request.server,
+            body.id_usuario,
+            'CREAR_SERVICIO',
+            { id_servicio: nuevoServicio.id_servicio, titulo: nuevoServicio.titulo },
+            request.ip
+        );
+
         return reply.status(201).send(nuevoServicio);
     },
 
@@ -134,6 +211,8 @@ export const ServicioController = {
             include: { imagenes: true }
         });
     },
+
+
 
 
     async delete(request: FastifyRequest, reply: FastifyReply) {

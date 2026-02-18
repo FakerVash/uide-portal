@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Avatar, Box, Container, Grid, Paper, Typography, Chip, Card, CardContent, CardMedia, CardActions, Button, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions, Rating } from '@mui/material';
+import { Avatar, Box, Container, Paper, Typography, Chip, Card, CardContent, CardMedia, CardActions, Button, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions, Rating } from '@mui/material';
+import Grid from '@mui/material/Grid';
 import { Sidebar } from '../components/Sidebar';
 import { Header } from '../components/Header';
 import { useApp } from '../lib/context/AppContext';
@@ -11,7 +12,9 @@ import AddCircleIcon from '@mui/icons-material/AddCircle';
 import DeleteIcon from '@mui/icons-material/Delete';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import ArchiveIcon from '@mui/icons-material/Archive';
-import { IconButton } from '@mui/material';
+import UnarchiveIcon from '@mui/icons-material/Unarchive';
+import VisibilityIcon from '@mui/icons-material/Visibility';
+import { IconButton, alpha } from '@mui/material';
 
 export const MyServices = () => {
     const { user } = useApp();
@@ -19,6 +22,8 @@ export const MyServices = () => {
     const [services, setServices] = useState([]);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [serviceToDelete, setServiceToDelete] = useState(null);
+    const [showArchived, setShowArchived] = useState(false);
+    const [loading, setLoading] = useState(false);
 
     // CRM State
     const [crmDialogOpen, setCrmDialogOpen] = useState(false);
@@ -26,36 +31,44 @@ export const MyServices = () => {
     const [servicePedidos, setServicePedidos] = useState([]);
     const [loadingCrm, setLoadingCrm] = useState(false);
 
-    useEffect(() => {
-        const fetchServices = async () => {
-            try {
-                const response = await fetch('/api/servicios');
-                if (response.ok) {
-                    const data = await response.json();
-                    const mappedServices = data.map(s => ({
+    const fetchServices = async () => {
+        try {
+            setLoading(true);
+            const response = await fetch(`/api/servicios?mis_servicios=true${showArchived ? '&ver_archivados=true' : ''}`, {
+                headers: { 'Authorization': `Bearer ${user.token}` }
+            });
+            if (response.ok) {
+                const data = await response.json();
+                const mappedServices = data.map(s => {
+                    return {
                         id: s.id_servicio,
                         providerId: s.id_usuario,
                         title: s.titulo,
-                        description: s.descripcion,
+                        description: s.description || s.descripcion,
                         price: s.precio,
                         image: s.imagen_portada || 'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?auto=format&fit=crop&q=80&w=2000',
                         category: s.categoria?.nombre_categoria || 'Sin categoría',
                         providerName: s.usuario ? `${s.usuario.nombre} ${s.usuario.apellido}` : 'Usuario',
-                        rating: s.calificacion_promedio ?? null,
-                        reviews: s._count?.resenas ?? 0
-                    }));
-                    setServices(mappedServices);
-                }
-            } catch (error) {
-                console.error('Error fetching services:', error);
-                toast.error('Error al cargar tus servicios');
+                        rating: s.calificacion_promedio ? parseFloat(s.calificacion_promedio) : 0,
+                        reviews: s._count?.resenas ?? 0,
+                        archivado: !!s.archivado
+                    };
+                });
+                setServices(mappedServices);
             }
-        };
+        } catch (error) {
+            console.error('Error fetching services:', error);
+            toast.error('Error al cargar tus servicios');
+        } finally {
+            setLoading(false);
+        }
+    };
 
+    useEffect(() => {
         if (user) {
             fetchServices();
         }
-    }, [user]);
+    }, [user, showArchived]);
 
     const handleOpenCrm = async (service) => {
         setSelectedServiceForCrm(service);
@@ -116,6 +129,29 @@ export const MyServices = () => {
         }
     };
 
+    const handleArchiveService = async (id, archivado) => {
+        try {
+            const response = await fetch(`/api/servicios/${id}/archivar`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${user.token}`
+                },
+                body: JSON.stringify({ archivado })
+            });
+
+            if (response.ok) {
+                toast.success(archivado ? 'Servicio archivado' : 'Servicio restaurado');
+                fetchServices();
+            } else {
+                toast.error('Error al archivar el servicio');
+            }
+        } catch (e) {
+            console.error(e);
+            toast.error('Error de red');
+        }
+    };
+
     const handleArchive = async (pedidoId) => {
         try {
             const response = await fetch(`/api/pedidos/${pedidoId}/archivar`, {
@@ -146,25 +182,26 @@ export const MyServices = () => {
 
     const handleConfirmDelete = async () => {
         try {
-            const response = await fetch(`/api/servicios/${serviceToDelete.id}`, {
-                method: 'DELETE',
+            const response = await fetch(`/api/servicios/${serviceToDelete.id}/archivar`, {
+                method: 'PATCH',
                 headers: {
+                    'Content-Type': 'application/json',
                     'Authorization': `Bearer ${user.token}`
-                }
+                },
+                body: JSON.stringify({ archivado: true })
             });
 
             if (response.ok) {
-                toast.success('Servicio eliminado exitosamente');
-                setServices(services.filter(s => s.id !== serviceToDelete.id));
+                toast.success('Servicio archivado exitosamente');
+                fetchServices();
                 setDeleteDialogOpen(false);
                 setServiceToDelete(null);
             } else {
-                const errorData = await response.json().catch(() => ({}));
-                toast.error(errorData.error || 'Error al eliminar el servicio');
+                toast.error('Error al archivar el servicio');
             }
         } catch (error) {
-            console.error('Error deleting service:', error);
-            toast.error('Error al eliminar el servicio');
+            console.error('Error archiving service:', error);
+            toast.error('Error de red');
         }
     };
 
@@ -175,10 +212,10 @@ export const MyServices = () => {
 
     if (!user) return null;
 
-    const myServices = services.filter(s => s.providerId === user.id_usuario);
+    const myServices = services; // Updated: Backend already filters for mis_servicios=true
 
     return (
-        <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: '#f9fafb' }}>
+        <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: 'background.default' }}>
             <Sidebar />
             <Box
                 sx={{
@@ -193,35 +230,72 @@ export const MyServices = () => {
                 <Header />
                 <Box
                     component="main"
-                    sx={{ flex: 1, overflowY: 'auto', p: { xs: 2, md: 3 }, minHeight: '100%', backgroundImage: 'linear-gradient(rgba(249, 250, 251, 0.9), rgba(249, 250, 251, 0.9)), url(/uide-watermark.png)', backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' }}
+                    sx={{
+                        flex: 1,
+                        overflowY: 'auto',
+                        p: { xs: 2, md: 3 },
+                        minHeight: '100%',
+                        backgroundImage: (theme) => {
+                            const overlay = theme.palette.mode === 'dark'
+                                ? 'linear-gradient(rgba(15, 23, 42, 0.92), rgba(15, 23, 42, 0.92))'
+                                : 'linear-gradient(rgba(249, 250, 251, 0.9), rgba(249, 250, 251, 0.9))';
+                            return `${overlay}, url(/uide-watermark.png)`;
+                        },
+                        backgroundSize: 'cover',
+                        backgroundPosition: 'center',
+                        backgroundRepeat: 'no-repeat'
+                    }}
                 >
                     <Box sx={{ width: '100%' }}>
-                        <Box sx={{ mb: 3 }}>
-                            <Typography variant="h3" sx={{ fontWeight: 900, color: '#111827', mb: 1 }}>
-                                Mis Servicios
-                            </Typography>
-                            <Typography variant="body1" sx={{ color: '#6b7280', fontWeight: 500, fontSize: '1.125rem' }}>
-                                Gestiona y monitorea tus servicios publicados
-                            </Typography>
+                        <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <Box>
+                                <Typography variant="h3" sx={{ fontWeight: 900, color: 'text.primary', mb: 1 }}>
+                                    Mis Servicios
+                                </Typography>
+                                <Typography variant="body1" sx={{ color: 'text.secondary', fontWeight: 500, fontSize: '1.125rem' }}>
+                                    Gestiona y monitorea tus servicios publicados
+                                </Typography>
+                            </Box>
+                            <Button
+                                size="small"
+                                onClick={() => setShowArchived(!showArchived)}
+                                startIcon={showArchived ? <VisibilityIcon /> : <ArchiveIcon />}
+                                sx={{
+                                    textTransform: 'none',
+                                    fontWeight: 700,
+                                    color: showArchived ? 'primary.main' : 'text.secondary',
+                                    bgcolor: showArchived ? (theme) => alpha(theme.palette.primary.main, 0.1) : 'transparent',
+                                    '&:hover': {
+                                        bgcolor: showArchived ? (theme) => alpha(theme.palette.primary.main, 0.2) : (theme) => alpha(theme.palette.text.secondary, 0.05)
+                                    },
+                                    borderRadius: 2,
+                                    px: 2
+                                }}
+                            >
+                                {showArchived ? 'Ocultar Archivados' : 'Mostrar Archivados'}
+                            </Button>
                         </Box>
 
                         {myServices.length > 0 ? (
                             <Grid container spacing={2}>
                                 {myServices.map((service) => (
-                                    <Grid item xs={12} sm={6} md={4} key={service.id}>
+                                    <Grid size={{ xs: 12, sm: 6, md: 4 }} key={service.id} sx={{ display: 'flex' }}>
                                         <Card
                                             sx={{
                                                 height: '100%',
+                                                width: '100%',
                                                 maxWidth: '100%',
                                                 mx: 'auto',
                                                 display: 'flex',
                                                 flexDirection: 'column',
                                                 borderRadius: 4,
-                                                border: '1px solid #f3f4f6',
+                                                border: (theme) => `1px solid ${theme.palette.divider}`,
                                                 transition: 'all 0.3s',
+                                                opacity: service.archivado ? 0.75 : 1,
                                                 '&:hover': {
                                                     boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
                                                     transform: 'translateY(-4px)',
+                                                    opacity: 1
                                                 },
                                             }}
                                         >
@@ -233,37 +307,74 @@ export const MyServices = () => {
                                                 sx={{ objectFit: 'cover' }}
                                             />
                                             <CardContent sx={{ flex: 1, p: 2 }}>
-                                                <Chip
-                                                    label={service.category}
-                                                    size="small"
-                                                    sx={{
-                                                        bgcolor: 'rgba(135, 10, 66, 0.1)',
-                                                        color: '#870a42',
-                                                        fontWeight: 700,
-                                                        fontSize: '0.625rem',
-                                                        mb: 1,
-                                                    }}
-                                                />
+                                                <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
+                                                    <Chip
+                                                        label={service.category}
+                                                        size="small"
+                                                        sx={{
+                                                            bgcolor: (theme) => (theme.palette.mode === 'dark' ? 'rgba(135, 10, 66, 0.25)' : 'rgba(135, 10, 66, 0.1)'),
+                                                            color: 'primary.main',
+                                                            fontWeight: 700,
+                                                            fontSize: '0.625rem',
+                                                        }}
+                                                    />
+                                                    {service.archivado && (
+                                                        <Chip
+                                                            label="Archivado"
+                                                            size="small"
+                                                            icon={<ArchiveIcon sx={{ fontSize: '14px !important' }} />}
+                                                            sx={{
+                                                                bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
+                                                                color: 'text.secondary',
+                                                                fontWeight: 700,
+                                                                fontSize: '0.625rem',
+                                                            }}
+                                                        />
+                                                    )}
+                                                </Box>
 
-                                                <Typography variant="h6" sx={{ fontWeight: 900, color: '#111827', mb: 1 }}>
+                                                <Typography
+                                                    variant="h6"
+                                                    sx={{
+                                                        fontWeight: 900,
+                                                        color: 'text.primary',
+                                                        mb: 1,
+                                                        display: '-webkit-box',
+                                                        overflow: 'hidden',
+                                                        WebkitBoxOrient: 'vertical',
+                                                        WebkitLineClamp: 2,
+                                                        minHeight: '3rem'
+                                                    }}
+                                                >
                                                     {service.title}
                                                 </Typography>
 
-                                                <Typography variant="body2" sx={{ color: '#6b7280', mb: 2 }}>
-                                                    {service.description.substring(0, 100)}...
+                                                <Typography
+                                                    variant="body2"
+                                                    sx={{
+                                                        color: 'text.secondary',
+                                                        mb: 2,
+                                                        display: '-webkit-box',
+                                                        overflow: 'hidden',
+                                                        WebkitBoxOrient: 'vertical',
+                                                        WebkitLineClamp: 3,
+                                                        minHeight: '3rem'
+                                                    }}
+                                                >
+                                                    {service.description}
                                                 </Typography>
 
                                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-                                                    <StarIcon sx={{ fontSize: '1rem', color: '#fbbf24' }} />
-                                                    <Typography variant="body2" sx={{ fontWeight: 700, color: '#111827' }}>
-                                                        {service.rating != null ? service.rating.toFixed(1) : '—'}
+                                                    <StarIcon sx={{ fontSize: '1rem', color: service.reviews > 0 ? '#fbbf24' : '#e5e7eb' }} />
+                                                    <Typography variant="body2" sx={{ fontWeight: 700, color: 'text.primary' }}>
+                                                        {service.reviews > 0 ? service.rating.toFixed(1) : 'Nuevo'}
                                                     </Typography>
-                                                    <Typography variant="caption" sx={{ color: '#9ca3af' }}>
-                                                        ({service.reviews} reseñas)
+                                                    <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                                                        ({service.reviews} {service.reviews === 1 ? 'reseña' : 'reseñas'})
                                                     </Typography>
                                                 </Box>
 
-                                                <Typography variant="h5" sx={{ fontWeight: 900, color: '#870a42' }}>
+                                                <Typography variant="h5" sx={{ fontWeight: 900, color: 'primary.main' }}>
                                                     ${service.price}
                                                 </Typography>
                                             </CardContent>
@@ -276,16 +387,30 @@ export const MyServices = () => {
                                                         size="small"
                                                         onClick={() => navigate(`/editar-servicio/${service.id}`)}
                                                         sx={{
-                                                            bgcolor: '#870a42',
+                                                            flex: 1,
+                                                            bgcolor: (theme) => theme.palette.mode === 'dark' ? '#870a42' : 'primary.main',
                                                             color: 'white',
                                                             fontWeight: 700,
                                                             borderRadius: 2,
                                                             textTransform: 'none',
                                                             fontSize: '0.75rem',
                                                             py: 0.75,
+                                                            boxShadow: (theme) => theme.palette.mode === 'dark'
+                                                                ? '0 4px 8px rgba(135, 10, 66, 0.3)'
+                                                                : '0 4px 8px rgba(0,0,0,0.1)',
                                                             '&:hover': {
-                                                                bgcolor: '#6b0835',
+                                                                bgcolor: (theme) => theme.palette.mode === 'dark' ? '#6b0835' : 'primary.dark',
+                                                                transform: 'translateY(-1px)',
+                                                                boxShadow: (theme) => theme.palette.mode === 'dark'
+                                                                    ? '0 8px 16px rgba(135, 10, 66, 0.4)'
+                                                                    : '0 8px 16px rgba(0,0,0,0.2)'
                                                             },
+                                                            '&:active': {
+                                                                transform: 'translateY(0)',
+                                                                boxShadow: (theme) => theme.palette.mode === 'dark'
+                                                                    ? '0 4px 8px rgba(135, 10, 66, 0.3)'
+                                                                    : '0 4px 8px rgba(0,0,0,0.1)'
+                                                            }
                                                         }}
                                                     >
                                                         Editar
@@ -296,65 +421,90 @@ export const MyServices = () => {
                                                         size="small"
                                                         onClick={() => navigate(`/service/${service.id}`)}
                                                         sx={{
-                                                            borderColor: '#870a42',
-                                                            color: '#870a42',
+                                                            flex: 1,
+                                                            borderColor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.3)' : 'primary.main',
+                                                            color: (theme) => theme.palette.mode === 'dark' ? '#ffffff' : 'primary.main',
+                                                            bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'transparent',
+                                                            fontWeight: 700,
+                                                            borderRadius: 2,
+                                                            textTransform: 'none',
+                                                            fontSize: '0.75rem',
+                                                            py: 0.75,
+                                                            boxShadow: (theme) => theme.palette.mode === 'dark'
+                                                                ? '0 1px 2px rgba(0,0,0,0.2)'
+                                                                : 'none',
+                                                            '&:hover': {
+                                                                borderColor: (theme) => theme.palette.mode === 'dark'
+                                                                    ? 'rgba(255,255,255,0.5)'
+                                                                    : 'primary.dark',
+                                                                bgcolor: (theme) => theme.palette.mode === 'dark'
+                                                                    ? 'rgba(255,255,255,0.1)'
+                                                                    : 'action.hover',
+                                                                transform: 'translateY(-1px)',
+                                                                boxShadow: (theme) => theme.palette.mode === 'dark'
+                                                                    ? '0 4px 8px rgba(0,0,0,0.3)'
+                                                                    : '0 4px 8px rgba(0,0,0,0.1)'
+                                                            },
+                                                            '&:active': {
+                                                                transform: 'translateY(0)',
+                                                                boxShadow: (theme) => theme.palette.mode === 'dark'
+                                                                    ? '0 1px 2px rgba(0,0,0,0.2)'
+                                                                    : 'none'
+                                                            }
+                                                        }}
+                                                    >
+                                                        Ver Detalles
+                                                    </Button>
+                                                </Box>
+                                                <Box sx={{ display: 'flex', gap: 1, width: '100%' }}>
+                                                    <Button
+                                                        onClick={() => handleOpenCrm(service)}
+                                                        sx={{
+                                                            flex: 2,
+                                                            bgcolor: (theme) => (theme.palette.mode === 'dark' ? theme.palette.background.paper : '#111827'),
+                                                            color: 'white',
                                                             fontWeight: 700,
                                                             borderRadius: 2,
                                                             textTransform: 'none',
                                                             fontSize: '0.75rem',
                                                             py: 0.75,
                                                             '&:hover': {
-                                                                borderColor: '#6b0835',
-                                                                bgcolor: 'rgba(135, 10, 66, 0.04)',
+                                                                bgcolor: (theme) => (theme.palette.mode === 'dark' ? 'rgba(148, 163, 184, 0.12)' : '#374151'),
                                                             },
                                                         }}
                                                     >
-                                                        Ver Detalles
+                                                        Ver Clientes (CRM)
                                                     </Button>
                                                 </Box>
-                                                <Button
-                                                    fullWidth
-                                                    variant="contained"
-                                                    size="small"
-                                                    startIcon={<DeleteIcon />}
-                                                    onClick={() => handleDeleteClick(service)}
-                                                    sx={{
-                                                        bgcolor: '#ef4444',
-                                                        color: 'white',
-                                                        fontWeight: 700,
-                                                        borderRadius: 2,
-                                                        textTransform: 'none',
-                                                        fontSize: '0.75rem',
-                                                        py: 0.75,
-                                                        '&:hover': {
-                                                            bgcolor: '#dc2626',
-                                                        },
-                                                    }}
-                                                >
-                                                    Eliminar
-                                                </Button>
-                                                <Button
-                                                    fullWidth
-                                                    variant="contained"
-                                                    size="small"
-                                                    onClick={() => handleOpenCrm(service)}
-                                                    sx={{
-                                                        bgcolor: '#111827',
-                                                        color: 'white',
-                                                        fontWeight: 700,
-                                                        borderRadius: 2,
-                                                        textTransform: 'none',
-                                                        fontSize: '0.75rem',
-                                                        py: 0.75,
-                                                        mt: 1,
-                                                        '&:hover': {
-                                                            bgcolor: '#374151',
-                                                        },
-                                                    }}
-                                                >
-                                                    Ver Clientes (CRM)
-                                                </Button>
 
+                                                <Button
+                                                    fullWidth
+                                                    variant="contained"
+                                                    size="small"
+                                                    startIcon={service.archivado ? <UnarchiveIcon /> : <ArchiveIcon />}
+                                                    onClick={() => service.archivado ? handleArchiveService(service.id, false) : handleDeleteClick(service)}
+                                                    sx={{
+                                                        bgcolor: service.archivado
+                                                            ? '#10b981' // Verde sólido para Restaurar
+                                                            : (theme) => (theme.palette.mode === 'dark' ? '#ef4444' : 'error.main'),
+                                                        color: 'white',
+                                                        fontWeight: 700,
+                                                        borderRadius: 2,
+                                                        textTransform: 'none',
+                                                        fontSize: '0.75rem',
+                                                        py: 0.75,
+                                                        boxShadow: `0 4px 8px ${service.archivado ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`,
+                                                        '&:hover': {
+                                                            bgcolor: service.archivado
+                                                                ? '#059669' // Verde oscuro al hover
+                                                                : (theme) => (theme.palette.mode === 'dark' ? '#dc2626' : 'error.dark'),
+                                                            transform: 'translateY(-1px)',
+                                                            boxShadow: `0 8px 16px ${service.archivado ? 'rgba(16, 185, 129, 0.4)' : 'rgba(239, 68, 68, 0.4)'}`
+                                                        }
+                                                    }}
+                                                >
+                                                    {service.archivado ? 'Restablecer (Publicar)' : 'Eliminar (Archivar)'}
+                                                </Button>
                                             </CardActions>
                                         </Card>
                                     </Grid>
@@ -366,7 +516,7 @@ export const MyServices = () => {
                                     textAlign: 'center',
                                     py: 12,
                                     borderRadius: 6,
-                                    border: '1px solid #e5e7eb',
+                                    border: (theme) => `1px solid ${theme.palette.divider}`,
                                     boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
                                 }}
                             >
@@ -374,7 +524,7 @@ export const MyServices = () => {
                                     sx={{
                                         width: 96,
                                         height: 96,
-                                        bgcolor: '#f9fafb',
+                                        bgcolor: 'background.paper',
                                         borderRadius: '50%',
                                         display: 'flex',
                                         alignItems: 'center',
@@ -382,12 +532,12 @@ export const MyServices = () => {
                                         margin: '0 auto 24px',
                                     }}
                                 >
-                                    <AddCircleIcon sx={{ fontSize: '3rem', color: '#d1d5db' }} />
+                                    <AddCircleIcon sx={{ fontSize: '3rem', color: 'text.secondary', opacity: 0.35 }} />
                                 </Box>
-                                <Typography variant="h5" sx={{ color: '#374151', fontWeight: 900, mb: 1 }}>
+                                <Typography variant="h5" sx={{ color: 'text.primary', fontWeight: 900, mb: 1 }}>
                                     Aún no has publicado ningún servicio
                                 </Typography>
-                                <Typography variant="body1" sx={{ color: '#9ca3af', mb: 4, maxWidth: 500, mx: 'auto' }}>
+                                <Typography variant="body1" sx={{ color: 'text.secondary', mb: 4, maxWidth: 500, mx: 'auto' }}>
                                     Crea tu primer servicio para comenzar a ofrecer tus habilidades y conectar con clientes
                                 </Typography>
                                 <Button
@@ -395,7 +545,7 @@ export const MyServices = () => {
                                     startIcon={<AddCircleIcon />}
                                     onClick={() => navigate('/crear-servicio')}
                                     sx={{
-                                        bgcolor: '#870a42',
+                                        bgcolor: 'primary.main',
                                         fontWeight: 700,
                                         px: 4,
                                         py: 1.5,
@@ -405,7 +555,7 @@ export const MyServices = () => {
                                         boxShadow: '0 10px 15px -3px rgba(135, 10, 66, 0.3)',
                                         transition: 'transform 0.2s',
                                         '&:hover': {
-                                            bgcolor: '#6b0835',
+                                            bgcolor: 'primary.dark',
                                             transform: 'scale(1.05)',
                                         },
                                     }}
@@ -428,7 +578,7 @@ export const MyServices = () => {
                     sx: { borderRadius: 4, p: 2 }
                 }}
             >
-                <DialogTitle sx={{ fontWeight: 900, color: '#111827', fontSize: '1.5rem' }}>
+                <DialogTitle sx={{ fontWeight: 900, color: 'text.primary', fontSize: '1.5rem' }}>
                     Gestión de Clientes: {selectedServiceForCrm?.title}
                 </DialogTitle>
                 <DialogContent>
@@ -441,7 +591,7 @@ export const MyServices = () => {
                     ) : servicePedidos.length > 0 ? (
                         <Grid container spacing={2}>
                             {servicePedidos.map((pedido) => (
-                                <Grid item xs={12} key={pedido.id_pedido}>
+                                <Grid size={{ xs: 12 }} key={pedido.id_pedido}>
                                     <Paper sx={{ p: 2, borderRadius: 3, border: '1px solid #e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2, flexWrap: 'wrap' }}>
                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                                             <Avatar src={pedido.cliente?.foto_perfil} alt={pedido.cliente?.nombre} />
@@ -483,32 +633,59 @@ export const MyServices = () => {
                                         ) : (
                                             <Box sx={{
                                                 display: 'flex',
-                                                bgcolor: '#f1f5f9',
+                                                bgcolor: pedido.estado === 'CANCELADO' ? '#fef2f2' : '#f1f5f9',
                                                 p: 0.5,
                                                 borderRadius: 99,
-                                                border: '1px solid #e2e8f0',
+                                                border: pedido.estado === 'CANCELADO' ? '1px solid #fee2e2' : '1px solid #e2e8f0',
                                                 position: 'relative',
                                                 overflow: 'hidden'
                                             }}>
-                                                {pedido.estado === 'PENDIENTE' ? (
-                                                    <Button
-                                                        onClick={() => handleUpdateStatus(pedido.id_pedido, 'EN_PROCESO')}
-                                                        fullWidth
-                                                        sx={{
-                                                            borderRadius: 99,
-                                                            px: 4,
-                                                            py: 0.5,
-                                                            textTransform: 'none',
-                                                            fontWeight: 900,
-                                                            fontSize: '0.75rem',
-                                                            bgcolor: '#870a42',
-                                                            color: 'white',
-                                                            '&:hover': { bgcolor: '#6b0835' },
-                                                            transition: 'all 0.2s ease'
-                                                        }}
-                                                    >
-                                                        Aprobar Solicitud
-                                                    </Button>
+                                                {pedido.estado === 'CANCELADO' ? (
+                                                    <Box sx={{ width: '100%', py: 1, textAlign: 'center' }}>
+                                                        <Typography sx={{ color: '#ef4444', fontWeight: 700, fontSize: '0.85rem' }}>
+                                                            Solicitud Rechazada
+                                                        </Typography>
+                                                    </Box>
+                                                ) : pedido.estado === 'PENDIENTE' ? (
+                                                    <Box sx={{ display: 'flex', gap: 1, width: '100%' }}>
+                                                        <Button
+                                                            onClick={() => handleUpdateStatus(pedido.id_pedido, 'CANCELADO')}
+                                                            sx={{
+                                                                flex: 1,
+                                                                borderRadius: 99,
+                                                                px: 2,
+                                                                py: 0.5,
+                                                                textTransform: 'none',
+                                                                fontWeight: 900,
+                                                                fontSize: '0.75rem',
+                                                                bgcolor: 'transparent',
+                                                                color: '#ef4444',
+                                                                border: '1px solid #ef4444',
+                                                                '&:hover': { bgcolor: 'rgba(239, 68, 68, 0.1)' },
+                                                                transition: 'all 0.2s ease'
+                                                            }}
+                                                        >
+                                                            Rechazar
+                                                        </Button>
+                                                        <Button
+                                                            onClick={() => handleUpdateStatus(pedido.id_pedido, 'EN_PROCESO')}
+                                                            sx={{
+                                                                flex: 1,
+                                                                borderRadius: 99,
+                                                                px: 2,
+                                                                py: 0.5,
+                                                                textTransform: 'none',
+                                                                fontWeight: 900,
+                                                                fontSize: '0.75rem',
+                                                                bgcolor: '#870a42',
+                                                                color: 'white',
+                                                                '&:hover': { bgcolor: '#6b0835' },
+                                                                transition: 'all 0.2s ease'
+                                                            }}
+                                                        >
+                                                            Aprobar
+                                                        </Button>
+                                                    </Box>
                                                 ) : (
                                                     <>
                                                         <Button
@@ -590,13 +767,13 @@ export const MyServices = () => {
                             ))}
                         </Grid>
                     ) : (
-                        <Box sx={{ textAlign: 'center', py: 4, bgcolor: '#f9fafb', borderRadius: 3 }}>
-                            <Typography sx={{ color: '#9ca3af' }}>No hay pedidos activos para este servicio.</Typography>
+                        <Box sx={{ textAlign: 'center', py: 4, bgcolor: 'background.paper', borderRadius: 3, border: (theme) => `1px dashed ${theme.palette.divider}` }}>
+                            <Typography sx={{ color: 'text.secondary' }}>No hay pedidos activos para este servicio.</Typography>
                         </Box>
                     )}
                 </DialogContent>
                 <DialogActions sx={{ p: 3 }}>
-                    <Button onClick={() => setCrmDialogOpen(false)} sx={{ fontWeight: 700, color: '#6b7280' }}>
+                    <Button onClick={() => setCrmDialogOpen(false)} sx={{ fontWeight: 700, color: 'text.secondary' }}>
                         Cerrar
                     </Button>
                 </DialogActions>
@@ -609,19 +786,20 @@ export const MyServices = () => {
                 aria-labelledby="delete-dialog-title"
                 aria-describedby="delete-dialog-description"
             >
-                <DialogTitle id="delete-dialog-title" sx={{ fontWeight: 700, color: '#111827' }}>
-                    ¿Eliminar servicio?
+                <DialogTitle id="delete-dialog-title" sx={{ fontWeight: 700, color: 'text.primary' }}>
+                    ¿Archivar servicio?
                 </DialogTitle>
                 <DialogContent>
-                    <DialogContentText id="delete-dialog-description" sx={{ color: '#6b7280' }}>
-                        ¿Estás seguro de que deseas eliminar el servicio "{serviceToDelete?.title}"? Esta acción no se puede deshacer.
+                    <DialogContentText id="delete-dialog-description" sx={{ color: 'text.secondary' }}>
+                        ¿Estás seguro de que deseas archivar el servicio "{serviceToDelete?.title}"?
+                        Podrás encontrarlo luego activando la opción "Mostrar Archivados".
                     </DialogContentText>
                 </DialogContent>
                 <DialogActions sx={{ p: 2, pt: 0 }}>
                     <Button
                         onClick={handleCancelDelete}
                         sx={{
-                            color: '#6b7280',
+                            color: 'text.secondary',
                             fontWeight: 700,
                             textTransform: 'none'
                         }}
@@ -632,15 +810,15 @@ export const MyServices = () => {
                         onClick={handleConfirmDelete}
                         variant="contained"
                         sx={{
-                            bgcolor: '#dc2626',
+                            bgcolor: 'primary.main',
                             fontWeight: 700,
                             textTransform: 'none',
                             '&:hover': {
-                                bgcolor: '#b91c1c'
+                                bgcolor: 'primary.dark'
                             }
                         }}
                     >
-                        Eliminar
+                        Archivar
                     </Button>
                 </DialogActions>
             </Dialog>

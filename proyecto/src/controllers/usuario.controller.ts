@@ -1,11 +1,32 @@
 import { FastifyReply, FastifyRequest } from 'fastify';
 import { UsuarioDTO } from '../models/usuario.js';
+import { AuditService } from '../services/audit.service.js';
 import bcrypt from 'bcrypt';
 
 export const UsuarioController = {
     async getAll(request: FastifyRequest, reply: FastifyReply) {
+        const { include_inactive, carrera_id, rol } = request.query as {
+            include_inactive?: string,
+            carrera_id?: string,
+            rol?: string
+        };
+
+        const whereClause: any = {};
+
+        if (include_inactive !== 'true') {
+            whereClause.activo = true;
+        }
+
+        if (carrera_id) {
+            whereClause.id_carrera = parseInt(carrera_id);
+        }
+
+        if (rol) {
+            whereClause.rol = rol.toUpperCase();
+        }
+
         const usuarios = await request.server.prisma.usuario.findMany({
-            where: { activo: true },
+            where: whereClause,
             include: { carrera: true }
         });
         // Excluir contraseña de la respuesta
@@ -86,6 +107,11 @@ export const UsuarioController = {
             rolAsignado = 'ESTUDIANTE';
         }
 
+        const rolFinal = rolAsignado;
+        const universityFinal = (rolFinal === 'ESTUDIANTE')
+            ? 'Universidad Internacional del Ecuador'
+            : body.university;
+
         const nuevoUsuario = await request.server.prisma.usuario.create({
             data: {
                 email: body.email,
@@ -94,21 +120,84 @@ export const UsuarioController = {
                 apellido: body.apellido,
                 telefono: body.telefono,
                 id_carrera: body.id_carrera,
-                university: body.university,
-                rol: rolAsignado
+                university: universityFinal,
+                rol: rolFinal
             }
         });
         return reply.status(201).send(nuevoUsuario);
     },
-
     async updateStatus(request: FastifyRequest, reply: FastifyReply) {
         const { id } = request.params as { id: string };
         const { activo } = request.body as { activo: boolean };
+        const adminUser = (request as any).user;
+
         const usuario = await request.server.prisma.usuario.update({
             where: { id_usuario: parseInt(id) },
             data: { activo }
         });
+
+        // Registrar Auditoría
+        if (adminUser) {
+            await AuditService.log(
+                request.server,
+                adminUser.id_usuario,
+                'CAMBIO_ESTADO_USUARIO',
+                { id_usuario_afectado: id, nuevo_estado: activo ? 'ACTIVO' : 'INACTIVO' },
+                request.ip
+            );
+        }
+
         return usuario;
+    },
+
+    async adminUpdate(request: FastifyRequest, reply: FastifyReply) {
+        const { id } = request.params as { id: string };
+        const { id_carrera } = request.body as { id_carrera: number };
+
+        if (!id_carrera) {
+            return reply.status(400).send({ message: 'Se requiere id_carrera' });
+        }
+
+        // Verificar que el usuario exista
+        const usuarioExistente = await request.server.prisma.usuario.findUnique({
+            where: { id_usuario: parseInt(id) }
+        });
+
+        if (!usuarioExistente) {
+            return reply.status(404).send({ message: 'Usuario no encontrado' });
+        }
+
+        // Actualizar solo la carrera
+        const usuarioActualizado = await request.server.prisma.usuario.update({
+            where: { id_usuario: parseInt(id) },
+            data: { id_carrera },
+            include: { carrera: true }
+        });
+
+        // Registrar en historial (opcional pero recomendado)
+        await request.server.prisma.historialPerfil.create({
+            data: {
+                id_usuario: parseInt(id),
+                campo_modificado: 'carrera (ADMIN)',
+                valor_anterior: usuarioExistente.id_carrera?.toString() || 'N/A',
+                valor_nuevo: id_carrera.toString()
+            }
+        });
+
+        // Registrar Auditoría
+        const adminUser = (request as any).user;
+        if (adminUser) {
+            await AuditService.log(
+                request.server,
+                adminUser.id_usuario,
+                'CAMBIO_CARRERA_ADMIN',
+                { id_usuario_afectado: id, id_nueva_carrera: id_carrera },
+                request.ip
+            );
+        }
+
+        const { contrasena, ...usuarioSinPass } = usuarioActualizado;
+        return usuarioSinPass;
     },
 
     async updateMe(request: FastifyRequest, reply: FastifyReply) {
@@ -200,23 +289,43 @@ export const UsuarioController = {
         const usuario = await request.server.prisma.usuario.update({
             where: { id_usuario },
             data: body as any,
-            include: { carrera: true }
+            include: {
+                carrera: true,
+                habilidades: {
+                    include: { habilidad: true }
+                }
+            }
         });
+
+        console.log('=== updateMe RESPONSE ===');
+        console.log('usuario.habilidades:', usuario.habilidades);
 
         const { contrasena, ...usuarioSinPass } = usuario;
         return usuarioSinPass;
     },
 
+    // FORCE RECOMPILE: Get current user profile with skills
     async getMe(request: FastifyRequest, reply: FastifyReply) {
         const user = request.user as { id_usuario: number };
         if (!user || !user.id_usuario) return reply.status(401).send({ message: 'No autorizado' });
 
+        console.log('🔍 getMe called for user ID:', user.id_usuario);
+
         const usuario = await request.server.prisma.usuario.findUnique({
             where: { id_usuario: user.id_usuario },
-            include: { carrera: true }
+            include: {
+                carrera: true,
+                habilidades: {
+                    include: { habilidad: true }
+                }
+            }
         });
 
         if (!usuario) return reply.status(404).send({ message: 'Usuario no encontrado' });
+
+        console.log('=== getMe RESPONSE ===');
+        console.log('usuario.habilidades:', usuario.habilidades);
+        console.log('Total habilidades:', usuario.habilidades?.length || 0);
 
         const { contrasena, ...usuarioSinPass } = usuario;
         return usuarioSinPass;

@@ -17,17 +17,31 @@ import SearchIcon from '@mui/icons-material/Search';
 const ServiceCard = ({ service, navigate }) => (
   <Card
     elevation={0}
+    onClick={() => navigate(`/service/${service.id}`)}
+    role="button"
+    tabIndex={0}
+    onKeyDown={(e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        navigate(`/service/${service.id}`);
+      }
+    }}
     sx={{
       height: '100%',
       display: 'flex',
       flexDirection: 'column',
       borderRadius: 4,
-      border: '1px solid #e5e7eb',
+      border: (theme) => `1px solid ${theme.palette.divider}`,
+      cursor: 'pointer',
       transition: 'all 0.3s ease-in-out',
       '&:hover': {
         transform: 'translateY(-4px)',
         boxShadow: '0 0 20px rgba(34, 211, 238, 0.4), 0 0 40px rgba(34, 211, 238, 0.2), 0 12px 24px -8px rgba(0, 0, 0, 0.15)',
         borderColor: 'rgba(34, 211, 238, 0.6)',
+      },
+      '&:focus-visible': {
+        outline: '3px solid rgba(135, 10, 66, 0.35)',
+        outlineOffset: 2,
       },
     }}
   >
@@ -48,8 +62,8 @@ const ServiceCard = ({ service, navigate }) => (
           label={service.category}
           size="small"
           sx={{
-            bgcolor: 'rgba(135, 10, 66, 0.1)',
-            color: '#870a42',
+            bgcolor: (theme) => (theme.palette.mode === 'dark' ? 'rgba(135, 10, 66, 0.25)' : 'rgba(135, 10, 66, 0.1)'),
+            color: 'primary.main',
             fontWeight: 700,
             fontSize: '0.6rem',
             height: '20px',
@@ -62,7 +76,7 @@ const ServiceCard = ({ service, navigate }) => (
         variant="subtitle1"
         sx={{
           fontWeight: 800,
-          color: '#111827',
+          color: 'text.primary',
           mb: 1,
           lineHeight: 1.3,
           height: '2.6rem',
@@ -79,7 +93,7 @@ const ServiceCard = ({ service, navigate }) => (
       <Typography
         variant="body2"
         sx={{
-          color: '#6b7280',
+          color: 'text.secondary',
           mb: 2,
           lineHeight: 1.5,
           fontSize: '0.8125rem',
@@ -93,41 +107,22 @@ const ServiceCard = ({ service, navigate }) => (
         {service.description}
       </Typography>
 
-      <Box sx={{ mt: 'auto', pt: 1.5, borderTop: '1px solid #f3f4f6', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <Box sx={{ mt: 'auto', pt: 1.5, borderTop: (theme) => `1px solid ${theme.palette.divider}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Box>
-          <Typography variant="caption" sx={{ color: '#9ca3af', display: 'block', mb: 0.5 }}>Por {service.providerName}</Typography>
+          <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 0.5 }}>Por {service.providerName}</Typography>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-            <StarIcon sx={{ fontSize: '0.9rem', color: '#fbbf24' }} />
-            <Typography variant="body2" sx={{ fontWeight: 700, color: '#111827', fontSize: '0.8rem' }}>
-              {service.rating != null ? service.rating.toFixed(1) : '—'}
+            <StarIcon sx={{ fontSize: '0.9rem', color: service.reviews > 0 ? '#fbbf24' : '#e5e7eb' }} />
+            <Typography variant="body2" sx={{ fontWeight: 700, color: 'text.primary', fontSize: '0.8rem' }}>
+              {service.reviews > 0 ? service.rating.toFixed(1) : 'Nuevo'}
             </Typography>
-            <Typography variant="caption" sx={{ color: '#9ca3af' }}>({service.reviews})</Typography>
+            <Typography variant="caption" sx={{ color: 'text.secondary' }}>({service.reviews})</Typography>
           </Box>
         </Box>
-        <Typography variant="h6" sx={{ fontWeight: 900, color: '#870a42', fontSize: '1.1rem' }}>
+        <Typography variant="h6" sx={{ fontWeight: 900, color: 'primary.main', fontSize: '1.1rem' }}>
           ${service.price}
         </Typography>
       </Box>
     </CardContent>
-
-    <CardActions sx={{ p: 1.5, pt: 0 }}>
-      <Button
-        fullWidth
-        variant="contained"
-        onClick={() => navigate(`/service/${service.id}`)}
-        sx={{
-          bgcolor: '#111827',
-          color: 'white',
-          '&:hover': { bgcolor: '#374151' },
-          textTransform: 'none',
-          fontWeight: 600,
-          borderRadius: 2,
-          py: 1
-        }}
-      >
-        Ver Detalles
-      </Button>
-    </CardActions>
   </Card>
 );
 
@@ -155,7 +150,7 @@ export const Dashboard = () => {
             image: s.imagen_portada || 'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?auto=format&fit=crop&q=80&w=2000',
             category: (typeof s.categoria === 'string' ? s.categoria : s.categoria?.nombre_categoria) || 'Sin categoría',
             providerName: s.usuario ? `${s.usuario.nombre} ${s.usuario.apellido}` : 'Usuario',
-            rating: s.calificacion_promedio ?? null,
+            rating: s.calificacion_promedio ? parseFloat(s.calificacion_promedio) : 0,
             reviews: s._count?.resenas ?? 0
           }));
           setServices(mappedServices);
@@ -189,10 +184,10 @@ export const Dashboard = () => {
   const renderGeneralDashboard = () => (
     <Box>
       <Box sx={{ mb: 3 }}>
-        <Typography variant="h4" sx={{ fontWeight: 800, color: '#1f2937', mb: 0.5, letterSpacing: '-0.025em' }}>
+        <Typography variant="h4" sx={{ fontWeight: 800, color: 'text.primary', mb: 0.5, letterSpacing: '-0.025em' }}>
           Servicios Disponibles
         </Typography>
-        <Typography variant="body1" sx={{ color: '#6b7280', fontSize: '0.9375rem' }}>
+        <Typography variant="body1" sx={{ color: 'text.secondary', fontSize: '0.9375rem' }}>
           Explora los servicios profesionales de nuestra comunidad estudiantil
         </Typography>
       </Box>
@@ -206,52 +201,67 @@ export const Dashboard = () => {
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
-                <SearchIcon sx={{ color: '#9ca3af' }} />
+                <SearchIcon sx={{ color: 'text.secondary' }} />
               </InputAdornment>
             ),
           }}
           sx={{
             '& .MuiOutlinedInput-root': {
               borderRadius: 3,
-              bgcolor: 'white',
+              bgcolor: 'background.paper',
               '& fieldset': {
-                borderColor: '#e5e7eb',
+                borderColor: 'divider',
                 borderWidth: 2,
               },
               '&:hover fieldset': {
-                borderColor: '#870a42',
+                borderColor: 'primary.main',
               },
               '&.Mui-focused fieldset': {
-                borderColor: '#870a42',
+                borderColor: 'primary.main',
               },
             },
           }}
         />
       </Box>
 
-      {/* Categorías */}
-      <Box sx={{ mb: 2, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-        {categories.map((category) => (
-          <Chip
-            key={category}
-            label={category}
-            onClick={() => setSelectedCategory(category)}
-            sx={{
-              bgcolor: selectedCategory === category ? '#870a42' : 'transparent',
-              color: selectedCategory === category ? 'white' : '#4b5563',
-              fontWeight: 600,
-              fontSize: '0.875rem',
-              border: '1px solid',
-              borderColor: selectedCategory === category ? '#870a42' : '#e5e7eb',
-              borderRadius: '8px',
-              px: 1,
-              '&:hover': {
-                bgcolor: selectedCategory === category ? '#6b0835' : '#f9fafb',
-                borderColor: selectedCategory === category ? '#6b0835' : '#d1d5db',
-              },
-            }}
-          />
-        ))}
+      {/* Categorías (Scroll Horizontal) */}
+      <Box sx={{
+        mb: 3,
+        display: 'flex',
+        gap: 1.5,
+        overflowX: 'auto',
+        pb: 1,
+        '::-webkit-scrollbar': { display: 'none' },
+        scrollbarWidth: 'none',
+        msOverflowStyle: 'none',
+        '& > div': { flexShrink: 0 } // Prevent chips from shrinking
+      }}>
+        {categories
+          .filter(category => {
+            if (category === 'Todas') return true;
+            return services.some(s => s.category === category);
+          })
+          .map((category) => (
+            <Chip
+              key={category}
+              label={category}
+              onClick={() => setSelectedCategory(category)}
+              sx={{
+                bgcolor: selectedCategory === category ? 'primary.main' : 'transparent',
+                color: selectedCategory === category ? 'primary.contrastText' : 'text.secondary',
+                fontWeight: 600,
+                fontSize: '0.875rem',
+                border: '1px solid',
+                borderColor: selectedCategory === category ? 'primary.main' : 'divider',
+                borderRadius: '8px',
+                px: 1,
+                '&:hover': {
+                  bgcolor: selectedCategory === category ? 'primary.dark' : 'action.hover',
+                  borderColor: selectedCategory === category ? 'primary.dark' : 'divider',
+                },
+              }}
+            />
+          ))}
       </Box>
 
       {/* Grid de Servicios */}
@@ -276,12 +286,12 @@ export const Dashboard = () => {
           sx={{
             textAlign: 'center',
             py: 10,
-            bgcolor: 'white',
+            bgcolor: 'background.paper',
             borderRadius: 6,
-            border: '2px dashed #e5e7eb',
+            border: (theme) => `2px dashed ${theme.palette.divider}`,
           }}
         >
-          <Typography variant="h6" sx={{ color: '#9ca3af', fontWeight: 500 }}>
+          <Typography variant="h6" sx={{ color: 'text.secondary', fontWeight: 500 }}>
             No se encontraron servicios que coincidan con tu búsqueda
           </Typography>
         </Box>
@@ -293,10 +303,10 @@ export const Dashboard = () => {
   const renderAdminDashboard = () => (
     <Box>
       <Box sx={{ mb: 3 }}>
-        <Typography variant="h3" sx={{ fontWeight: 900, color: '#111827', mb: 0.5 }}>
+        <Typography variant="h3" sx={{ fontWeight: 900, color: 'text.primary', mb: 0.5 }}>
           Panel de Administración
         </Typography>
-        <Typography variant="body1" sx={{ color: '#6b7280', fontWeight: 500, fontSize: '1rem' }}>
+        <Typography variant="body1" sx={{ color: 'text.secondary', fontWeight: 500, fontSize: '1rem' }}>
           Gestiona usuarios y servicios de la plataforma
         </Typography>
       </Box>
@@ -308,15 +318,15 @@ export const Dashboard = () => {
             sx={{
               p: 3,
               borderRadius: 4,
-              border: '1px solid #f3f4f6',
-              boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
-              transition: 'border 0.2s',
+              border: (theme) => `1px solid ${theme.palette.divider}`,
+              boxShadow: 'none',
+              transition: 'border-color 0.2s',
               '&:hover': {
                 borderColor: '#870a42',
               },
             }}
           >
-            <Typography variant="caption" sx={{ color: '#6b7280', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+            <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
               Total Usuarios
             </Typography>
             <Typography variant="h3" sx={{ fontWeight: 900, color: '#870a42', mt: 1 }}>
@@ -330,15 +340,15 @@ export const Dashboard = () => {
             sx={{
               p: 3,
               borderRadius: 4,
-              border: '1px solid #f3f4f6',
-              boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
-              transition: 'border 0.2s',
+              border: (theme) => `1px solid ${theme.palette.divider}`,
+              boxShadow: 'none',
+              transition: 'border-color 0.2s',
               '&:hover': {
                 borderColor: '#870a42',
               },
             }}
           >
-            <Typography variant="caption" sx={{ color: '#6b7280', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+            <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
               Servicios Activos
             </Typography>
             <Typography variant="h3" sx={{ fontWeight: 900, color: '#870a42', mt: 1 }}>
@@ -352,15 +362,15 @@ export const Dashboard = () => {
             sx={{
               p: 3,
               borderRadius: 4,
-              border: '1px solid #f3f4f6',
-              boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
-              transition: 'border 0.2s',
+              border: (theme) => `1px solid ${theme.palette.divider}`,
+              boxShadow: 'none',
+              transition: 'border-color 0.2s',
               '&:hover': {
                 borderColor: '#870a42',
               },
             }}
           >
-            <Typography variant="caption" sx={{ color: '#6b7280', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+            <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
               Categorías
             </Typography>
             <Typography variant="h3" sx={{ fontWeight: 900, color: '#870a42', mt: 1 }}>
@@ -372,10 +382,10 @@ export const Dashboard = () => {
 
 
       <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
-        <Typography variant="h5" sx={{ fontWeight: 900, color: '#374151' }}>
+        <Typography variant="h5" sx={{ fontWeight: 900, color: 'text.primary' }}>
           Todos los Servicios
         </Typography>
-        <Box sx={{ flex: 1, height: 4, bgcolor: '#f3f4f6', borderRadius: 2 }} />
+        <Box sx={{ flex: 1, height: 2, bgcolor: 'divider', borderRadius: 2 }} />
       </Box>
 
 
@@ -402,7 +412,7 @@ export const Dashboard = () => {
       sx={{
         display: 'flex',
         minHeight: '100vh',
-        bgcolor: '#f9fafb',
+        bgcolor: 'background.default',
       }}
     >
       <Sidebar />
@@ -426,7 +436,12 @@ export const Dashboard = () => {
             overflowY: 'auto',
             p: { xs: 2, md: 3 },
             minHeight: '100%',
-            backgroundImage: 'linear-gradient(rgba(249, 250, 251, 0.9), rgba(249, 250, 251, 0.9)), url(/uide-watermark.png)',
+            backgroundImage: (theme) => {
+              const overlay = theme.palette.mode === 'dark'
+                ? 'linear-gradient(rgba(15, 23, 42, 0.92), rgba(15, 23, 42, 0.92))'
+                : 'linear-gradient(rgba(249, 250, 251, 0.9), rgba(249, 250, 251, 0.9))';
+              return `${overlay}, url(/uide-watermark.png)`;
+            },
             backgroundSize: 'cover',
             backgroundPosition: 'center',
             backgroundRepeat: 'no-repeat',

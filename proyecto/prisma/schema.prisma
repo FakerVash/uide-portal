@@ -19,12 +19,26 @@ model Carrera {
   id_carrera     Int             @id @default(autoincrement())
   id_facultad    Int
   nombre_carrera String          @db.VarChar(150)
+  descripcion_carrera String?    @db.Text
+  imagen_carrera String?         @db.VarChar(500)
+  banner_carrera String?         @db.VarChar(500)
+  duracion_anios Int             @default(4)
+  tipo_carrera   CarreraTipo     @default(PREGRADO)
+  fecha_registro DateTime?       @default(now()) @db.Timestamp(0)
+  activo         Boolean?        @default(true)
   facultad       Facultad        @relation(fields: [id_facultad], references: [id_facultad], onDelete: Cascade)
   requerimientos Requerimiento[]
   usuarios       Usuario[]
 
   @@index([id_facultad], map: "carreras_id_facultad_fkey")
   @@map("carreras")
+}
+
+enum CarreraTipo {
+  PREGRADO
+  POSTGRADO
+  MAESTRIA
+  DOCTORADO
 }
 
 model Usuario {
@@ -41,11 +55,10 @@ model Usuario {
   fecha_registro        DateTime?          @default(now()) @db.Timestamp(0)
   activo                Boolean?           @default(true)
   banner                String?            @db.VarChar(255)
-  bio                   String?            @db.Text
-  career                String?            @db.VarChar(150)
   university            String?            @db.VarChar(150)
   skills                String?            @db.Text
   historial             HistorialPerfil[]
+  auditoria             Auditoria[]
   pedidos_comprados     Pedido[]           @relation("ClientePedidos")
   postulaciones         Postulacion[]      @relation("EstudiantePostulaciones")
   requerimientos        Requerimiento[]    @relation("ClienteRequerimientos")
@@ -92,6 +105,7 @@ model Servicio {
   imagen_portada    String?          @db.VarChar(255)
   fecha_publicacion DateTime?        @default(now()) @db.Timestamp(0)
   activo            Boolean?         @default(true)
+  archivado         Boolean          @default(false)
   pedidos           Pedido[]
   resenas           Resena[]
   imagenes          ServicioImagen[]
@@ -199,6 +213,7 @@ model Requerimiento {
   presupuesto       Decimal?      @db.Decimal(10, 2)
   estado            String        @default("ABIERTO")
   fecha_publicacion DateTime      @default(now())
+  archivado         Boolean       @default(false)
   postulaciones     Postulacion[]
   carrera           Carrera       @relation(fields: [id_carrera], references: [id_carrera])
   cliente           Usuario       @relation("ClienteRequerimientos", fields: [id_cliente], references: [id_usuario])
@@ -234,4 +249,17 @@ enum Rol {
   ESTUDIANTE
   CLIENTE
   ADMIN
+}
+
+model Auditoria {
+  id_auditoria Int      @id @default(autoincrement())
+  id_usuario   Int
+  accion       String   @db.VarChar(100)
+  detalles     String?  @db.Text
+  fecha        DateTime @default(now()) @db.Timestamp(0)
+  ip           String?  @db.VarChar(50)
+  usuario      Usuario  @relation(fields: [id_usuario], references: [id_usuario], onDelete: Cascade)
+
+  @@index([id_usuario], map: "auditoria_id_usuario_fkey")
+  @@map("auditoria")
 }

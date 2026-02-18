@@ -84,7 +84,7 @@ export const ServiceDetails = () => {
                 description: data.description || data.descripcion,
                 price: parseFloat(data.precio),
                 image: data.imagen_portada || 'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4',
-                images: data.imagenes?.map(img => img.url) || [],
+                images: data.imagenes || [],
                 category: data.categoria ? data.categoria.nombre_categoria : 'General',
                 rating: (data.resenas?.length > 0)
                     ? data.resenas.reduce((s, r) => s + r.calificacion, 0) / data.resenas.length
@@ -168,17 +168,37 @@ export const ServiceDetails = () => {
 
     const handleContactClick = async () => {
         if (provider?.phone) {
-            toast.loading('Contactando...');
+            const toastId = toast.loading('Contactando...');
             try {
+                // Crear el pedido en el backend
                 const response = await fetch('/api/pedidos', {
-                    method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${user?.token}` },
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${user?.token}` },
                     body: JSON.stringify({ id_servicio: parseInt(id), monto_total: service.price, notas: 'Contacto vía WhatsApp' })
                 });
-                if (response.ok) {
-                    fetchPedidoStatus();
-                }
-            } catch (e) { }
 
+                if (response.ok) {
+                    await fetchPedidoStatus();
+                    toast.success('Servicio añadido a tus pedidos', { id: toastId });
+                } else {
+                    // Si el pedido ya existe, el backend podría retornar el objeto pero con otro status o simplemente el objeto
+                    // Si ya existe, actualizamos el estado y no mostramos error
+                    const data = await response.json();
+                    if (data && data.id_pedido) {
+                        await fetchPedidoStatus();
+                        toast.success('Continuando con tu pedido existente', { id: toastId });
+                    } else {
+                        console.error('Error creating order:', data);
+                        toast.error('No se pudo registrar el pedido, pero abriendo chat...', { id: toastId });
+                    }
+                }
+            } catch (e) {
+                console.error(e);
+                // Si falla la red, igual abrimos WhatsApp
+                toast.dismiss(toastId);
+            }
+
+            // Abrir WhatsApp siempre
             const phone = provider.phone.replace(/\D/g, '');
             const fmtPhone = phone.startsWith('593') ? phone : `593${phone.startsWith('0') ? phone.substring(1) : phone}`;
             const msg = encodeURIComponent(`Hola, vi tu servicio "${service.title}" en el Portal UIDE y me interesa.`);
@@ -193,11 +213,11 @@ export const ServiceDetails = () => {
     const deliveryTime = service?.deliveryTime || (service ? getDeliveryTime(service.category) : '');
 
     return (
-        <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: '#f9fafb' }}>
+        <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: (theme) => theme.palette.background.default }}>
             <Sidebar />
             <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', ml: { xs: 0, md: '240px' } }}>
                 <Header />
-                <Box component="main" sx={{ flex: 1, p: { xs: 2, md: 3 }, maxWidth: '1600px', mx: 'auto', width: '100%', minHeight: '100%', backgroundImage: 'linear-gradient(rgba(249, 250, 251, 0.9), rgba(249, 250, 251, 0.9)), url(/uide-watermark.png)', backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' }}>
+                <Box component="main" sx={{ flex: 1, p: { xs: 2, sm: 2.5, md: 3 }, maxWidth: '1600px', mx: 'auto', width: '100%', minHeight: '100%', backgroundImage: (theme) => theme.palette.mode === 'dark' ? 'none' : 'linear-gradient(rgba(249, 250, 251, 0.9), rgba(249, 250, 251, 0.9)), url(/uide-watermark.png)', backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' }}>
                     {loading ? (
                         <Box sx={{ display: 'flex', justifyContent: 'center', mt: 10 }}><Typography>Cargando...</Typography></Box>
                     ) : service ? (
@@ -207,19 +227,20 @@ export const ServiceDetails = () => {
                                 {/* Header Info */}
                                 <Box sx={{ mb: 3 }}>
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                                        <Chip label={service.category} size="small" sx={{ borderRadius: 1, bgcolor: '#e5e7eb', fontWeight: 600, color: '#4b5563' }} />
+                                        <Chip label={service.category} size="small" sx={{ borderRadius: 1, bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : '#e5e7eb', fontWeight: 600, color: (theme) => theme.palette.mode === 'dark' ? theme.palette.text.secondary : '#4b5563' }} />
                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                            {service.reviews > 0 ? (
-                                                <>
-                                                    <StarIcon sx={{ fontSize: '1rem', color: '#fbbf24' }} />
-                                                    <Typography variant="body2" sx={{ fontWeight: 700, color: '#374151' }}>{service.rating.toFixed(1)} ({service.reviews} reseñas)</Typography>
-                                                </>
-                                            ) : (
-                                                <Typography variant="body2" sx={{ color: '#9ca3af', fontWeight: 500 }}>Sin valorar aún</Typography>
+                                            <StarIcon sx={{ fontSize: '1rem', color: service.rating > 0 ? '#fbbf24' : '#e5e7eb' }} />
+                                            <Typography variant="body2" sx={{ fontWeight: 700, color: (theme) => theme.palette.text.primary }}>
+                                                {service.rating > 0 ? service.rating.toFixed(1) : 'Nuevo'}
+                                            </Typography>
+                                            {service.reviews > 0 && (
+                                                <Typography variant="body2" sx={{ color: (theme) => theme.palette.text.secondary, ml: 0.5 }}>
+                                                    ({service.reviews} reseñas)
+                                                </Typography>
                                             )}
                                         </Box>
                                     </Box>
-                                    <Typography variant="h3" sx={{ fontWeight: 800, color: '#111827', mb: 2, letterSpacing: '-0.025em' }}>
+                                    <Typography variant="h3" sx={{ fontWeight: 800, color: (theme) => theme.palette.text.primary, mb: 2, letterSpacing: '-0.025em' }}>
                                         {service.title}
                                     </Typography>
                                 </Box>
@@ -229,11 +250,11 @@ export const ServiceDetails = () => {
                                     onClick={() => handleOpenLightbox(0)}
                                     sx={{
                                         width: '100%',
-                                        height: '400px',
+                                        height: { xs: '250px', sm: '350px', md: '400px' },
                                         borderRadius: 3,
                                         overflow: 'hidden',
                                         cursor: 'pointer',
-                                        mb: 4,
+                                        mb: { xs: 3, md: 4 },
                                         border: '1px solid #e5e7eb',
                                         position: 'relative',
                                         '&:hover': { opacity: 0.95 }
@@ -243,7 +264,16 @@ export const ServiceDetails = () => {
                                     <Button
                                         variant="contained"
                                         startIcon={<ArrowForwardIosIcon />}
-                                        sx={{ position: 'absolute', bottom: 16, right: 16, bgcolor: 'white', color: 'black', '&:hover': { bgcolor: '#f3f4f6' } }}
+                                        onClick={() => {
+                                            if (service && service.images && service.images.length > 0) {
+                                                setCurrentImageIndex(0);
+                                                setLightboxOpen(true);
+                                            } else {
+                                                // Si no hay imágenes adicionales, mostrar mensaje
+                                                toast.info('Este servicio no tiene imágenes adicionales en la galería');
+                                            }
+                                        }}
+                                        sx={{ position: 'absolute', bottom: 16, right: 16, bgcolor: (theme) => theme.palette.background.paper, color: (theme) => theme.palette.text.primary, '&:hover': { bgcolor: (theme) => theme.palette.action.hover } }}
                                     >
                                         Ver Galería
                                     </Button>
@@ -251,7 +281,7 @@ export const ServiceDetails = () => {
 
                                 {/* Panel: Precio, Estado, Botones, Contacto - Visible en móvil/tablet (después de imagen) */}
                                 <Box sx={{ display: { xs: 'block', md: 'none' }, mb: 4 }}>
-                                    <Paper elevation={0} sx={{ p: 3, borderRadius: 3, border: '1px solid #e5e7eb', overflow: 'hidden' }}>
+                                    <Paper elevation={0} sx={{ p: 3, borderRadius: 3, border: (theme) => `1px solid ${theme.palette.divider}`, overflow: 'hidden', bgcolor: (theme) => theme.palette.background.paper }}>
                                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, pb: 2, borderBottom: '1px solid #f3f4f6' }}>
                                             <Typography variant="subtitle1" sx={{ fontWeight: 600, color: '#6b7280' }}>Precio Total</Typography>
                                             <Typography variant="h4" sx={{ fontWeight: 800, color: '#059669' }}>${service.price}</Typography>
@@ -261,59 +291,67 @@ export const ServiceDetails = () => {
                                             <Typography variant="body2">Entrega estimada: {deliveryTime}</Typography>
                                         </Box>
                                         {activePedido && (
-                                            <Chip label={`Estado: ${activePedido.estado}`} size="medium" sx={{ width: '100%', mb: 2, py: 1.5, fontWeight: 700, borderRadius: 2, bgcolor: activePedido.estado === 'COMPLETADO' ? '#ecfdf5' : '#fef3c7', color: activePedido.estado === 'COMPLETADO' ? '#059669' : '#d97706', borderColor: 'transparent' }} />
+                                            <Chip label={`Estado: ${activePedido.estado}`} size="medium" sx={{ width: '100%', mb: 2, py: 1.5, fontWeight: 700, borderRadius: 2, bgcolor: activePedido.estado === 'COMPLETADO' ? (theme) => theme.palette.success.light : (theme) => theme.palette.warning.light, color: activePedido.estado === 'COMPLETADO' ? (theme) => theme.palette.success.dark : (theme) => theme.palette.warning.dark, borderColor: 'transparent' }} />
                                         )}
                                         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, mb: 2 }}>
-                                            {activePedido ? (
+                                            {user && service.providerId === user.id_usuario ? (
+                                                <Box sx={{ textAlign: 'center', py: 2, px: 3, borderRadius: 2, bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : '#f3f4f6' }}>
+                                                    <Typography variant="body2" sx={{ color: (theme) => theme.palette.text.secondary, fontWeight: 600 }}>
+                                                        Este es tu propio servicio
+                                                    </Typography>
+                                                    <Typography variant="caption" sx={{ color: (theme) => theme.palette.text.disabled }}>
+                                                        No puedes contratarte a ti mismo
+                                                    </Typography>
+                                                </Box>
+                                            ) : user && user.role === 'admin' ? (
+                                                <Box sx={{ textAlign: 'center', py: 2, px: 3, borderRadius: 2, bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : '#f3f4f6' }}>
+                                                    <Typography variant="body2" sx={{ color: (theme) => theme.palette.text.secondary, fontWeight: 600 }}>
+                                                        Vista de Administrador
+                                                    </Typography>
+                                                    <Typography variant="caption" sx={{ color: (theme) => theme.palette.text.disabled }}>
+                                                        Los administradores no pueden realizar contrataciones
+                                                    </Typography>
+                                                </Box>
+                                            ) : activePedido ? (
                                                 <>
                                                     {activePedido.estado === 'COMPLETADO' && (
-                                                        <Button fullWidth variant="contained" onClick={handleContactClick} sx={{ bgcolor: '#111827', color: 'white', py: 1.5, fontWeight: 600, borderRadius: 2, textTransform: 'none', '&:hover': { bgcolor: '#374151' } }}>Volver a Contratar</Button>
+                                                        <Button fullWidth variant="contained" onClick={handleContactClick} sx={{ bgcolor: (theme) => theme.palette.text.primary, color: (theme) => theme.palette.background.paper, py: 1.5, fontWeight: 600, borderRadius: 2, textTransform: 'none', '&:hover': { bgcolor: (theme) => theme.palette.action.hover } }}>Volver a Contratar</Button>
                                                     )}
                                                     {activePedido.estado === 'COMPLETADO' && !activePedido.resena && (
-                                                        <Button fullWidth variant="outlined" onClick={() => setRatingOpen(true)} sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600, borderColor: '#fbbf24', color: '#d97706' }}>Dejar reseña</Button>
+                                                        <Button fullWidth variant="outlined" onClick={() => setRatingOpen(true)} sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600, borderColor: (theme) => theme.palette.warning.main, color: (theme) => theme.palette.warning.dark }}>Dejar reseña</Button>
                                                     )}
                                                     <Button fullWidth variant="contained" startIcon={<WhatsAppIcon />} onClick={() => { const phone = provider.phone.replace(/\D/g, ''); const fmtPhone = phone.startsWith('593') ? phone : `593${phone.startsWith('0') ? phone.substring(1) : phone}`; window.open(`https://api.whatsapp.com/send?phone=${fmtPhone}&text=${encodeURIComponent(`Hola, tengo una consulta sobre mi pedido del servicio "${service.title}".`)}`, '_blank'); }} sx={{ bgcolor: '#25D366', color: 'white', py: 1.5, fontWeight: 600, borderRadius: 2, textTransform: 'none', '&:hover': { bgcolor: '#128C7E' } }}>Continuar Chat</Button>
                                                 </>
                                             ) : (
-                                                <Button fullWidth variant="contained" onClick={handleContactClick} startIcon={<WhatsAppIcon />} sx={{ bgcolor: '#111827', color: 'white', py: 1.5, fontWeight: 600, borderRadius: 2, textTransform: 'none', '&:hover': { bgcolor: '#374151' } }}>Contactar y Contratar</Button>
+                                                <Button fullWidth variant="contained" onClick={handleContactClick} startIcon={<WhatsAppIcon />} sx={{ bgcolor: (theme) => theme.palette.text.primary, color: (theme) => theme.palette.background.paper, py: 1.5, fontWeight: 600, borderRadius: 2, textTransform: 'none', '&:hover': { bgcolor: (theme) => theme.palette.action.hover } }}>Contactar y Contratar</Button>
                                             )}
                                         </Box>
                                         <Box sx={{ pt: 2, borderTop: '1px solid #f3f4f6' }}>
-                                            <Typography variant="overline" sx={{ fontWeight: 700, color: '#9ca3af', fontSize: '0.7rem' }}>Acerca del Estudiante</Typography>
+                                            <Typography variant="overline" sx={{ fontWeight: 700, color: (theme) => theme.palette.text.disabled, fontSize: '0.7rem' }}>Acerca del Estudiante</Typography>
                                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mt: 1.5, mb: 1.5 }}>
                                                 <Avatar src={provider.image} sx={{ width: 40, height: 40 }} />
-                                                <Box><Typography variant="subtitle2" sx={{ fontWeight: 700 }}>{provider.name}</Typography><Typography variant="caption" sx={{ color: '#6b7280' }}>{provider.career}</Typography></Box>
+                                                <Box><Typography variant="subtitle2" sx={{ fontWeight: 700, color: (theme) => theme.palette.text.primary }}>{provider.name}</Typography><Typography variant="caption" sx={{ color: (theme) => theme.palette.text.secondary }}>{provider.career}</Typography></Box>
                                             </Box>
-                                            <Button fullWidth variant="outlined" size="small" onClick={() => navigate(`/perfil/${provider.id}`)} sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600 }}>Ver Perfil Completo</Button>
+                                            <Button fullWidth variant="outlined" size="small" onClick={() => navigate(`/perfil/${provider.id}`)} sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600, borderColor: (theme) => theme.palette.divider, color: (theme) => theme.palette.text.primary, '&:hover': { borderColor: (theme) => theme.palette.text.secondary, bgcolor: (theme) => theme.palette.action.hover } }}>Ver Perfil Completo</Button>
                                         </Box>
-                                        <Typography variant="caption" sx={{ display: 'block', textAlign: 'center', mt: 2, color: '#9ca3af' }}>Garantía de satisfacción UIDE</Typography>
+                                        <Typography variant="caption" sx={{ display: 'block', textAlign: 'center', mt: 2, color: (theme) => theme.palette.text.disabled }}>Garantía de satisfacción UIDE</Typography>
                                     </Paper>
                                 </Box>
 
                                 {/* About Service */}
-                                <Paper elevation={0} sx={{ p: 4, borderRadius: 3, border: '1px solid #e5e7eb', mb: 4, width: '100%', maxWidth: 'none' }}>
-                                    <Typography variant="h5" sx={{ fontWeight: 700, mb: 2, color: '#111827' }}>Acerca del servicio</Typography>
-                                    <Typography paragraph sx={{ color: '#4b5563', lineHeight: 1.7 }}>
+                                <Paper elevation={0} sx={{ p: 4, borderRadius: 3, border: (theme) => `1px solid ${theme.palette.divider}`, mb: 4, width: '100%', maxWidth: 'none', bgcolor: (theme) => theme.palette.background.paper }}>
+                                    <Typography variant="h5" sx={{ fontWeight: 700, mb: 2, color: (theme) => theme.palette.text.primary }}>Acerca del servicio</Typography>
+                                    <Typography paragraph sx={{ color: (theme) => theme.palette.text.secondary, lineHeight: 1.7 }}>
                                         {service.description || extendedDescription}
                                     </Typography>
 
-                                    <Typography variant="subtitle1" sx={{ fontWeight: 700, mt: 3, mb: 2, color: '#111827' }}>¿Qué incluye?</Typography>
-                                    <Grid container spacing={2}>
-                                        {features.map((feature, i) => (
-                                            <Grid size={{ xs: 12, sm: 6, md: 4 }} key={i}>
-                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                                                    <CheckCircleIcon sx={{ color: '#10b981', fontSize: 20 }} />
-                                                    <Typography sx={{ color: '#4b5563' }}>{feature}</Typography>
-                                                </Box>
-                                            </Grid>
-                                        ))}
-                                    </Grid>
+
                                 </Paper>
 
                                 {/* Reseñas */}
-                                <Paper elevation={0} sx={{ p: 4, borderRadius: 3, border: '1px solid #e5e7eb', width: '100%', maxWidth: 'none' }}>
+                                <Paper elevation={0} sx={{ p: 4, borderRadius: 3, border: (theme) => `1px solid ${theme.palette.divider}`, width: '100%', maxWidth: 'none', bgcolor: (theme) => theme.palette.background.paper }}>
                                     <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
-                                        <Typography variant="h5" sx={{ fontWeight: 700, color: '#111827' }}>Reseñas</Typography>
+                                        <Typography variant="h5" sx={{ fontWeight: 700, color: (theme) => theme.palette.text.primary }}>Reseñas</Typography>
                                         {service.reviews > 0 && (
                                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                                 <StarIcon sx={{ color: '#fbbf24' }} />
@@ -333,11 +371,11 @@ export const ServiceDetails = () => {
                                                             <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>{[r.usuario?.nombre, r.usuario?.apellido].filter(Boolean).join(' ') || 'Usuario'}</Typography>
                                                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                                                 <Rating value={r.calificacion} size="small" readOnly />
-                                                                <Typography variant="caption" sx={{ color: '#9ca3af' }}>{new Date(r.fecha_resena).toLocaleDateString()}</Typography>
+                                                                <Typography variant="caption" sx={{ color: (theme) => theme.palette.text.disabled }}>{new Date(r.fecha_resena).toLocaleDateString()}</Typography>
                                                             </Box>
                                                         </Box>
                                                     </Box>
-                                                    <Typography variant="body2" sx={{ color: '#4b5563', pl: 7 }}>"{r.comentario}"</Typography>
+                                                    <Typography variant="body2" sx={{ color: (theme) => theme.palette.text.secondary, pl: 7 }}>"{r.comentario}"</Typography>
                                                 </Box>
                                             ))}
                                         </Box>
@@ -356,25 +394,25 @@ export const ServiceDetails = () => {
                                         top: 24,
                                         p: 0,
                                         borderRadius: 3,
-                                        border: '1px solid #e5e7eb',
+                                        border: (theme) => `1px solid ${theme.palette.divider}`,
                                         overflow: 'hidden',
-                                        bgcolor: 'white',
+                                        bgcolor: (theme) => theme.palette.background.paper,
                                     }}
                                 >
                                     {/* Sección 1: Precio y Entrega */}
-                                    <Box sx={{ p: 3, borderBottom: '1px solid #f3f4f6' }}>
+                                    <Box sx={{ p: 3, borderBottom: (theme) => `1px solid ${theme.palette.divider}` }}>
                                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                                            <Typography variant="subtitle1" sx={{ fontWeight: 600, color: '#6b7280' }}>Precio Total</Typography>
-                                            <Typography variant="h4" sx={{ fontWeight: 800, color: '#059669' }}>${service.price}</Typography>
+                                            <Typography variant="subtitle1" sx={{ fontWeight: 600, color: (theme) => theme.palette.text.secondary }}>Precio Total</Typography>
+                                            <Typography variant="h4" sx={{ fontWeight: 800, color: (theme) => theme.palette.success.main }}>${service.price}</Typography>
                                         </Box>
-                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: '#4b5563' }}>
-                                            <AccessTimeIcon fontSize="small" sx={{ color: '#9ca3af' }} />
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: (theme) => theme.palette.text.secondary }}>
+                                            <AccessTimeIcon fontSize="small" sx={{ color: (theme) => theme.palette.text.disabled }} />
                                             <Typography variant="body2" sx={{ fontWeight: 500 }}>Entrega estimada: {deliveryTime}</Typography>
                                         </Box>
                                     </Box>
 
                                     {/* Sección 2: Estado y Acciones */}
-                                    <Box sx={{ p: 3, borderBottom: '1px solid #f3f4f6' }}>
+                                    <Box sx={{ p: 3, borderBottom: (theme) => `1px solid ${theme.palette.divider}` }}>
                                         {activePedido && (
                                             <Chip
                                                 label={`Estado: ${activePedido.estado}`}
@@ -385,35 +423,53 @@ export const ServiceDetails = () => {
                                                     py: 1.5,
                                                     fontWeight: 700,
                                                     borderRadius: 2,
-                                                    bgcolor: activePedido.estado === 'COMPLETADO' ? '#ecfdf5' : activePedido.estado === 'PENDIENTE' ? '#fef3c7' : '#eff6ff',
-                                                    color: activePedido.estado === 'COMPLETADO' ? '#059669' : activePedido.estado === 'PENDIENTE' ? '#d97706' : '#1d4ed8',
+                                                    bgcolor: activePedido.estado === 'COMPLETADO' ? (theme) => theme.palette.success.light : activePedido.estado === 'PENDIENTE' ? (theme) => theme.palette.warning.light : (theme) => theme.palette.info.light,
+                                                    color: activePedido.estado === 'COMPLETADO' ? (theme) => theme.palette.success.dark : activePedido.estado === 'PENDIENTE' ? (theme) => theme.palette.warning.dark : (theme) => theme.palette.info.dark,
                                                     borderColor: 'transparent',
                                                 }}
                                             />
                                         )}
                                         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                                            {activePedido ? (
+                                            {user && service.providerId === user.id_usuario ? (
+                                                <Box sx={{ textAlign: 'center', py: 2, px: 3, borderRadius: 2, bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : '#f3f4f6' }}>
+                                                    <Typography variant="body2" sx={{ color: (theme) => theme.palette.text.secondary, fontWeight: 600 }}>
+                                                        Este es tu propio servicio
+                                                    </Typography>
+                                                    <Typography variant="caption" sx={{ color: (theme) => theme.palette.text.disabled }}>
+                                                        No puedes contratarte a ti mismo
+                                                    </Typography>
+                                                </Box>
+                                            ) : user && user.role === 'admin' ? (
+                                                <Box sx={{ textAlign: 'center', py: 2, px: 3, borderRadius: 2, bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : '#f3f4f6' }}>
+                                                    <Typography variant="body2" sx={{ color: (theme) => theme.palette.text.secondary, fontWeight: 600 }}>
+                                                        Vista de Administrador
+                                                    </Typography>
+                                                    <Typography variant="caption" sx={{ color: (theme) => theme.palette.text.disabled }}>
+                                                        Los administradores no pueden realizar contrataciones
+                                                    </Typography>
+                                                </Box>
+                                            ) : activePedido ? (
                                                 <>
                                                     {activePedido.estado === 'COMPLETADO' && (
-                                                    <Button
-                                                        fullWidth
-                                                        variant="contained"
-                                                        onClick={handleContactClick}
-                                                        sx={{
-                                                            bgcolor: '#111827',
-                                                            color: 'white',
-                                                            py: 1.5,
-                                                            fontWeight: 600,
-                                                            borderRadius: 2,
-                                                            textTransform: 'none',
-                                                            '&:hover': { bgcolor: '#374151' }
-                                                        }}
-                                                    >
-                                                        Volver a Contratar
-                                                    </Button>
+                                                        <Button
+                                                            fullWidth
+                                                            variant="contained"
+                                                            onClick={handleContactClick}
+                                                            sx={{
+                                                                bgcolor: (theme) => theme.palette.text.primary,
+                                                                color: (theme) => theme.palette.background.paper,
+                                                                py: 1.5,
+                                                                fontWeight: 600,
+                                                                borderRadius: 2,
+                                                                textTransform: 'none',
+                                                                '&:hover': { bgcolor: (theme) => theme.palette.action.hover }
+                                                            }}
+                                                        >
+                                                            Volver a Contratar
+                                                        </Button>
                                                     )}
                                                     {activePedido.estado === 'COMPLETADO' && !activePedido.resena && (
-                                                        <Button fullWidth variant="outlined" onClick={() => setRatingOpen(true)} sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600, borderColor: '#fbbf24', color: '#d97706' }}>
+                                                        <Button fullWidth variant="outlined" onClick={() => setRatingOpen(true)} sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600, borderColor: (theme) => theme.palette.warning.main, color: (theme) => theme.palette.warning.dark }}>
                                                             Dejar reseña
                                                         </Button>
                                                     )}
@@ -439,34 +495,34 @@ export const ServiceDetails = () => {
                                                     onClick={handleContactClick}
                                                     startIcon={<WhatsAppIcon />}
                                                     sx={{
-                                                        bgcolor: '#111827',
-                                                        color: 'white',
+                                                        bgcolor: (theme) => theme.palette.text.primary,
+                                                        color: (theme) => theme.palette.background.paper,
                                                         py: 1.5,
                                                         fontWeight: 600,
                                                         borderRadius: 2,
                                                         textTransform: 'none',
-                                                        '&:hover': { bgcolor: '#374151' }
+                                                        '&:hover': { bgcolor: (theme) => theme.palette.action.hover }
                                                     }}
                                                 >
                                                     Contactar y Contratar
                                                 </Button>
                                             )}
                                         </Box>
-                                        <Typography variant="caption" sx={{ display: 'block', textAlign: 'center', mt: 2, color: '#9ca3af' }}>
+                                        <Typography variant="caption" sx={{ display: 'block', textAlign: 'center', mt: 2, color: (theme) => theme.palette.text.disabled }}>
                                             Garantía de satisfacción UIDE
                                         </Typography>
                                     </Box>
 
                                     {/* Sección 3: Acerca del Estudiante (siempre en la misma posición) */}
                                     <Box sx={{ p: 3 }}>
-                                        <Typography variant="overline" sx={{ fontWeight: 700, color: '#9ca3af', letterSpacing: 1, fontSize: '0.7rem' }}>
+                                        <Typography variant="overline" sx={{ fontWeight: 700, color: (theme) => theme.palette.text.disabled, letterSpacing: 1, fontSize: '0.7rem' }}>
                                             Acerca del Estudiante
                                         </Typography>
                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mt: 2, mb: 2 }}>
-                                            <Avatar src={provider.image} sx={{ width: 48, height: 48, border: '2px solid #e5e7eb' }} />
+                                            <Avatar src={provider.image} sx={{ width: 48, height: 48, border: (theme) => `2px solid ${theme.palette.divider}` }} />
                                             <Box sx={{ minWidth: 0 }}>
-                                                <Typography variant="subtitle1" sx={{ fontWeight: 700, color: '#111827' }}>{provider.name}</Typography>
-                                                <Typography variant="body2" sx={{ color: '#6b7280', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{provider.career}</Typography>
+                                                <Typography variant="subtitle1" sx={{ fontWeight: 700, color: (theme) => theme.palette.text.primary }}>{provider.name}</Typography>
+                                                <Typography variant="body2" sx={{ color: (theme) => theme.palette.text.secondary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{provider.career}</Typography>
                                             </Box>
                                         </Box>
                                         <Button
@@ -474,7 +530,7 @@ export const ServiceDetails = () => {
                                             variant="outlined"
                                             size="medium"
                                             onClick={() => navigate(`/perfil/${provider.id}`)}
-                                            sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600, borderColor: '#e5e7eb', color: '#374151', '&:hover': { borderColor: '#9ca3af', bgcolor: '#f9fafb' } }}
+                                            sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600, borderColor: (theme) => theme.palette.divider, color: (theme) => theme.palette.text.primary, '&:hover': { borderColor: (theme) => theme.palette.text.secondary, bgcolor: (theme) => theme.palette.action.hover } }}
                                         >
                                             Ver Perfil Completo
                                         </Button>
@@ -501,10 +557,11 @@ export const ServiceDetails = () => {
                         width: '100%',
                         borderRadius: 3,
                         outline: 'none',
+                        bgcolor: (theme) => theme.palette.background.paper,
                     }}
                 >
-                    <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>¿Cómo fue tu experiencia?</Typography>
-                    <Typography variant="body2" sx={{ color: '#6b7280', mb: 3 }}>Califica el servicio que recibiste. Tu reseña será visible para otros usuarios.</Typography>
+                    <Typography variant="h6" sx={{ fontWeight: 700, mb: 2, color: (theme) => theme.palette.text.primary }}>¿Cómo fue tu experiencia?</Typography>
+                    <Typography variant="body2" sx={{ color: (theme) => theme.palette.text.secondary, mb: 3 }}>Califica el servicio que recibiste. Tu reseña será visible para otros usuarios.</Typography>
                     <Box sx={{ mb: 3 }}>
                         <Typography variant="subtitle2" sx={{ mb: 1 }}>Calificación</Typography>
                         <Rating

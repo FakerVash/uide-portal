@@ -6,7 +6,7 @@ import logo from '../styles/logo.png';
 
 const LoadingVerification = () => {
     const navigate = useNavigate();
-    const { user } = useApp();
+    const { user, setUser } = useApp();
     const [profileImage, setProfileImage] = useState(user?.image || null);
 
     // Obtener la foto de perfil real del backend
@@ -21,6 +21,8 @@ const LoadingVerification = () => {
                         const data = await response.json();
                         if (data.foto_perfil) {
                             setProfileImage(data.foto_perfil);
+                            // ACTUALIZAR CONTEXTO GLOBAL PARA EL SIDEBAR
+                            setUser(prev => ({ ...prev, image: data.foto_perfil }));
                         }
                     }
                 }
@@ -29,11 +31,11 @@ const LoadingVerification = () => {
             }
         };
         fetchProfileImage();
-    }, [user?.token]);
+    }, [user?.token, setUser]);
 
     useEffect(() => {
         const timer = setTimeout(() => {
-            navigate('/');
+            navigate('/dashboard');
         }, 3500);
 
         return () => clearTimeout(timer);

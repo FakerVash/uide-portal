@@ -10,7 +10,11 @@ export const AppProvider = ({ children }) => {
     return savedUser || null;
   });
 
-  const [darkMode, setDarkMode] = useState(false);
+  // Initialize darkMode from localStorage
+  const [darkMode, setDarkMode] = useState(() => {
+    const saved = localStorage.getItem('darkMode');
+    return saved !== null ? JSON.parse(saved) : false;
+  });
 
   const [favorites, setFavorites] = useState([]);
 
@@ -22,6 +26,11 @@ export const AppProvider = ({ children }) => {
       rmDataUser();
     }
   }, [user]);
+
+  useEffect(() => {
+    // Persist darkMode to localStorage
+    localStorage.setItem('darkMode', JSON.stringify(darkMode));
+  }, [darkMode]);
 
   useEffect(() => {
     // Aplicar o remover clase dark del documento

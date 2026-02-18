@@ -177,7 +177,7 @@ export const UpdateService = () => {
     if (loading) return <div>Cargando...</div>;
 
     return (
-        <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: '#f9fafb' }}>
+        <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: (theme) => theme.palette.background.default }}>
             <Sidebar />
             <Box
                 sx={{
@@ -192,7 +192,21 @@ export const UpdateService = () => {
                 <Header />
                 <Box
                     component="main"
-                    sx={{ flex: 1, overflowY: 'auto', p: { xs: 2, md: 3 }, minHeight: '100%', backgroundImage: 'linear-gradient(rgba(249, 250, 251, 0.9), rgba(249, 250, 251, 0.9)), url(/uide-watermark.png)', backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' }}
+                    sx={{ 
+                        flex: 1, 
+                        overflowY: 'auto', 
+                        p: { xs: 2, md: 3 }, 
+                        minHeight: '100%', 
+                        backgroundImage: (theme) => {
+                            const overlay = theme.palette.mode === 'dark'
+                                ? 'linear-gradient(rgba(15, 23, 42, 0.92), rgba(15, 23, 42, 0.92))'
+                                : 'linear-gradient(rgba(249, 250, 251, 0.9), rgba(249, 250, 251, 0.9))';
+                            return `${overlay}, url(/uide-watermark.png)`;
+                        },
+                        backgroundSize: 'cover', 
+                        backgroundPosition: 'center', 
+                        backgroundRepeat: 'no-repeat' 
+                    }}
                 >
                     <Container maxWidth="md">
                         <Box sx={{ mb: 5 }}>
@@ -207,10 +221,10 @@ export const UpdateService = () => {
                             >
                                 <AutoAwesomeIcon sx={{ fontSize: '1.5rem', color: '#870a42' }} />
                             </Box>
-                            <Typography variant="h4" sx={{ fontWeight: 900, color: '#111827', mb: 1, letterSpacing: '-0.02em' }}>
+                            <Typography variant="h4" sx={{ fontWeight: 900, color: 'text.primary', mb: 1, letterSpacing: '-0.02em' }}>
                                 Editar Servicio
                             </Typography>
-                            <Typography variant="body1" sx={{ color: '#6b7280', fontWeight: 500 }}>
+                            <Typography variant="body1" sx={{ color: 'text.secondary', fontWeight: 500 }}>
                                 Actualiza la información de tu servicio.
                             </Typography>
                         </Box>
@@ -225,7 +239,7 @@ export const UpdateService = () => {
                             <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                                 <Grid container spacing={3}>
                                     <Grid item xs={12}>
-                                        <Typography variant="caption" sx={{ color: '#374151', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', mb: 1, display: 'block' }}>
+                                        <Typography variant="caption" sx={{ color: (theme) => theme.palette.mode === 'dark' ? '#ffffff' : '#374151', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', mb: 1, display: 'block' }}>
                                             Título del Servicio
                                         </Typography>
                                         <TextField
@@ -235,12 +249,12 @@ export const UpdateService = () => {
                                             value={formData.title}
                                             onChange={handleChange}
                                             required
-                                            InputProps={{ sx: { borderRadius: 3, bgcolor: 'white', fontWeight: 500 } }}
+                                            InputProps={{ sx: { borderRadius: 3, bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'white', fontWeight: 500 } }}
                                         />
                                     </Grid>
 
                                     <Grid item xs={12} md={6}>
-                                        <Typography variant="caption" sx={{ color: '#374151', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', mb: 1, display: 'block' }}>
+                                        <Typography variant="caption" sx={{ color: (theme) => theme.palette.mode === 'dark' ? '#ffffff' : '#374151', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', mb: 1, display: 'block' }}>
                                             Categoría
                                         </Typography>
                                         <TextField
@@ -250,7 +264,7 @@ export const UpdateService = () => {
                                             value={formData.category} // Needs to match one of the categories
                                             onChange={handleChange}
                                             required
-                                            InputProps={{ sx: { borderRadius: 3, bgcolor: 'white', fontWeight: 500 } }}
+                                            InputProps={{ sx: { borderRadius: 3, bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'white', fontWeight: 500 } }}
                                         >
                                             {categories.map((category) => (
                                                 <MenuItem key={category.id_categoria} value={category.nombre_categoria}>
@@ -261,7 +275,7 @@ export const UpdateService = () => {
                                     </Grid>
 
                                     <Grid item xs={12} md={6}>
-                                        <Typography variant="caption" sx={{ color: '#374151', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', mb: 1, display: 'block' }}>
+                                        <Typography variant="caption" sx={{ color: (theme) => theme.palette.mode === 'dark' ? '#ffffff' : '#374151', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', mb: 1, display: 'block' }}>
                                             Precio Total (USD)
                                         </Typography>
                                         <TextField
@@ -273,12 +287,12 @@ export const UpdateService = () => {
                                           value={formData.price}
                                           onChange={handleChange}
                                           required
-                                          InputProps={{ sx: { borderRadius: 3, bgcolor: 'white', fontWeight: 500 } }}
+                                          InputProps={{ sx: { borderRadius: 3, bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'white', fontWeight: 500 } }}
                                         />
                                     </Grid>
 
                                     <Grid item xs={12} md={6}>
-                                        <Typography variant="caption" sx={{ color: '#374151', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', mb: 1, display: 'block' }}>
+                                        <Typography variant="caption" sx={{ color: (theme) => theme.palette.mode === 'dark' ? '#ffffff' : '#374151', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', mb: 1, display: 'block' }}>
                                             Tiempo de Entrega Estimado
                                         </Typography>
                                         <TextField
@@ -288,13 +302,13 @@ export const UpdateService = () => {
                                           value={formData.tiempo_entrega}
                                           onChange={handleChange}
                                           required
-                                          InputProps={{ sx: { borderRadius: 3, bgcolor: 'white', fontWeight: 500 } }}
+                                          InputProps={{ sx: { borderRadius: 3, bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'white', fontWeight: 500 } }}
                                         />
                                     </Grid>
                                 </Grid>
 
                                 <Box>
-                                    <Typography variant="caption" sx={{ color: '#374151', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', mb: 1, display: 'block' }}>
+                                    <Typography variant="caption" sx={{ color: (theme) => theme.palette.mode === 'dark' ? '#ffffff' : '#374151', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', mb: 1, display: 'block' }}>
                                         Descripción del Servicio
                                     </Typography>
                                     <TextField
@@ -306,12 +320,12 @@ export const UpdateService = () => {
                                         value={formData.description}
                                         onChange={handleChange}
                                         required
-                                        InputProps={{ sx: { borderRadius: 3, bgcolor: 'white', fontWeight: 500 } }}
+                                        InputProps={{ sx: { borderRadius: 3, bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'white', fontWeight: 500 } }}
                                     />
                                 </Box>
 
                                 <Box>
-                                    <Typography variant="caption" sx={{ color: '#374151', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', mb: 1, display: 'block' }}>
+                                    <Typography variant="caption" sx={{ color: (theme) => theme.palette.mode === 'dark' ? '#ffffff' : '#374151', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', mb: 1, display: 'block' }}>
                                         Imagen de Portada
                                     </Typography>
                                     <input
@@ -324,7 +338,7 @@ export const UpdateService = () => {
                                     <Box
                                         onClick={() => fileInputRef.current.click()}
                                         sx={{
-                                            border: '2px dashed #e5e7eb',
+                                            border: (theme) => `2px dashed ${theme.palette.divider}`,
                                             borderRadius: 4,
                                             p: formData.imagen_portada ? 1 : 5,
                                             textAlign: 'center',
@@ -333,8 +347,8 @@ export const UpdateService = () => {
                                             overflow: 'hidden',
                                             position: 'relative',
                                             '&:hover': {
-                                                borderColor: '#870a42',
-                                                bgcolor: 'rgba(135, 10, 66, 0.05)',
+                                                borderColor: (theme) => theme.palette.mode === 'dark' ? '#870a42' : '#870a42',
+                                                bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(135, 10, 66, 0.1)' : 'rgba(135, 10, 66, 0.05)',
                                             },
                                         }}
                                     >
@@ -351,14 +365,14 @@ export const UpdateService = () => {
                                             </Box>
                                         ) : (
                                             <Box sx={{ p: 2 }}>
-                                                <CloudUploadIcon sx={{ fontSize: '2rem', color: '#9ca3af', mb: 1 }} />
-                                                <Typography variant="body1" sx={{ fontWeight: 700, color: '#111827' }}>Haz clic para subir una imagen</Typography>
+                                                <CloudUploadIcon sx={{ fontSize: '2rem', color: (theme) => theme.palette.mode === 'dark' ? '#9ca3af' : '#9ca3af', mb: 1 }} />
+                                                <Typography variant="body1" sx={{ fontWeight: 700, color: (theme) => theme.palette.mode === 'dark' ? '#ffffff' : '#111827' }}>Haz clic para subir una imagen</Typography>
                                             </Box>
                                         )}
                                     </Box>
                                 </Box>
 
-                                <Box sx={{ pt: 4, borderTop: '1px solid #f3f4f6', display: 'flex', gap: 2 }}>
+                                <Box sx={{ pt: 4, borderTop: (theme) => `1px solid ${theme.palette.divider}`, display: 'flex', gap: 2 }}>
                                     <Button
                                         type="button"
                                         variant="outlined"
@@ -368,11 +382,32 @@ export const UpdateService = () => {
                                             flex: 1,
                                             borderRadius: 3,
                                             fontWeight: 700,
-                                            color: '#6b7280',
-                                            borderColor: '#e5e7eb',
+                                            color: (theme) => theme.palette.mode === 'dark' ? '#ffffff' : '#6b7280',
+                                            borderColor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.3)' : '#e5e7eb',
+                                            bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'transparent',
                                             textTransform: 'none',
                                             py: 1.5,
-                                            '&:hover': { bgcolor: '#f9fafb', borderColor: '#e5e7eb' },
+                                            boxShadow: (theme) => theme.palette.mode === 'dark' 
+                                                ? '0 1px 2px rgba(0,0,0,0.2)' 
+                                                : 'none',
+                                            '&:hover': { 
+                                                bgcolor: (theme) => theme.palette.mode === 'dark' 
+                                                    ? 'rgba(255,255,255,0.1)' 
+                                                    : '#f9fafb', 
+                                                borderColor: (theme) => theme.palette.mode === 'dark' 
+                                                    ? 'rgba(255,255,255,0.5)' 
+                                                    : '#d1d5db',
+                                                transform: 'translateY(-1px)',
+                                                boxShadow: (theme) => theme.palette.mode === 'dark' 
+                                                    ? '0 4px 8px rgba(0,0,0,0.3)' 
+                                                    : '0 4px 8px rgba(0,0,0,0.1)'
+                                            },
+                                            '&:active': {
+                                                transform: 'translateY(0)',
+                                                boxShadow: (theme) => theme.palette.mode === 'dark' 
+                                                    ? '0 1px 2px rgba(0,0,0,0.2)' 
+                                                    : 'none'
+                                            }
                                         }}
                                     >
                                         Cancelar
@@ -385,11 +420,26 @@ export const UpdateService = () => {
                                             flex: 1,
                                             borderRadius: 3,
                                             fontWeight: 900,
-                                            bgcolor: '#870a42',
+                                            bgcolor: (theme) => theme.palette.mode === 'dark' ? '#870a42' : '#870a42',
+                                            color: '#ffffff',
                                             textTransform: 'none',
                                             py: 1.5,
-                                            boxShadow: '0 10px 15px -3px rgba(135, 10, 66, 0.2)',
-                                            '&:hover': { bgcolor: '#6b0835' },
+                                            boxShadow: (theme) => theme.palette.mode === 'dark' 
+                                                ? '0 10px 15px -3px rgba(135, 10, 66, 0.4)' 
+                                                : '0 10px 15px -3px rgba(135, 10, 66, 0.2)',
+                                            '&:hover': { 
+                                                bgcolor: (theme) => theme.palette.mode === 'dark' ? '#6b0835' : '#6b0835',
+                                                transform: 'translateY(-1px)',
+                                                boxShadow: (theme) => theme.palette.mode === 'dark' 
+                                                    ? '0 20px 25px -5px rgba(135, 10, 66, 0.5)' 
+                                                    : '0 20px 25px -5px rgba(135, 10, 66, 0.3)'
+                                            },
+                                            '&:active': {
+                                                transform: 'translateY(0)',
+                                                boxShadow: (theme) => theme.palette.mode === 'dark' 
+                                                    ? '0 10px 15px -3px rgba(135, 10, 66, 0.4)' 
+                                                    : '0 10px 15px -3px rgba(135, 10, 66, 0.2)'
+                                            }
                                         }}
                                     >
                                         Guardar Cambios

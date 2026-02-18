@@ -719,7 +719,17 @@ export const Register = () => {
                       placeholder=""
                       value={formData.universidad}
                       onChange={handleChange}
-                      disabled={formData.email.toLowerCase().endsWith('@uide.edu.ec')}
+                      disabled
+                      inputProps={{ readOnly: true }}
+                      sx={{
+                        '& .MuiInputBase-input.Mui-disabled': {
+                          WebkitTextFillColor: '#111827',
+                          color: '#111827',
+                        },
+                        '& .MuiOutlinedInput-root.Mui-disabled': {
+                          backgroundColor: '#f8fafc',
+                        }
+                      }}
                       startIcon={<BusinessIcon />}
                       required
                     />

@@ -1,22 +1,36 @@
+-- ==========================================================
+-- SCRIPT MAESTRO DE BASE DE DATOS: SERVICIOS ESTUDIANTILES
+-- COBERTURA: ESQUEMA, SEMILLAS, AUTENTICACIÓN Y SEGURIDAD
+-- ==========================================================
+
 DROP DATABASE IF EXISTS servicios_estudiantiles;
 CREATE DATABASE servicios_estudiantiles CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE servicios_estudiantiles;
 
--- 1. FACULTADES
+-- 1. ESTRUCTURA DE TABLAS (BASADA EN SQL Y PRISMA)
+
+-- 1.1 FACULTADES
 CREATE TABLE facultades (
     id_facultad INT AUTO_INCREMENT PRIMARY KEY,
     nombre_facultad VARCHAR(150) NOT NULL UNIQUE
-);
+) ENGINE=InnoDB;
 
--- 2. CARRERAS
+-- 1.2 CARRERAS
 CREATE TABLE carreras (
     id_carrera INT AUTO_INCREMENT PRIMARY KEY,
     id_facultad INT NOT NULL,
     nombre_carrera VARCHAR(150) NOT NULL,
+    descripcion_carrera TEXT,
+    imagen_carrera VARCHAR(500),
+    banner_carrera VARCHAR(500),
+    duracion_anios INT DEFAULT 4,
+    tipo_carrera ENUM('PREGRADO', 'POSTGRADO', 'MAESTRIA', 'DOCTORADO') DEFAULT 'PREGRADO',
+    fecha_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    activo BOOLEAN DEFAULT TRUE,
     FOREIGN KEY (id_facultad) REFERENCES facultades(id_facultad) ON DELETE CASCADE
-);
+) ENGINE=InnoDB;
 
--- 3. USUARIOS 
+-- 1.3 USUARIOS
 CREATE TABLE usuarios (
     id_usuario INT AUTO_INCREMENT PRIMARY KEY,
     email VARCHAR(100) NOT NULL UNIQUE,
@@ -36,17 +50,17 @@ CREATE TABLE usuarios (
     fecha_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     activo BOOLEAN DEFAULT TRUE,
     FOREIGN KEY (id_carrera) REFERENCES carreras(id_carrera) ON DELETE SET NULL
-);
+) ENGINE=InnoDB;
 
--- 4. CATEGORIAS
+-- 1.4 CATEGORIAS
 CREATE TABLE categorias (
     id_categoria INT AUTO_INCREMENT PRIMARY KEY,
     nombre_categoria VARCHAR(100) NOT NULL UNIQUE,
     descripcion TEXT,
     icono VARCHAR(50) 
-);
+) ENGINE=InnoDB;
 
--- 5. SERVICIOS (Alineado con MVP)
+-- 1.5 SERVICIOS
 CREATE TABLE servicios (
     id_servicio INT AUTO_INCREMENT PRIMARY KEY,
     id_usuario INT NOT NULL,
@@ -61,23 +75,23 @@ CREATE TABLE servicios (
     FOREIGN KEY (id_usuario) REFERENCES usuarios(id_usuario) ON DELETE CASCADE,
     FOREIGN KEY (id_categoria) REFERENCES categorias(id_categoria) ON DELETE CASCADE,
     FULLTEXT INDEX idx_busqueda (titulo, descripcion)
-);
+) ENGINE=InnoDB;
 
--- 5.1 IMAGENES DE SERVICIOS
+-- 1.6 IMAGENES DE SERVICIOS
 CREATE TABLE servicio_imagenes (
     id_imagen INT AUTO_INCREMENT PRIMARY KEY,
     id_servicio INT NOT NULL,
     url VARCHAR(255) NOT NULL,
     FOREIGN KEY (id_servicio) REFERENCES servicios(id_servicio) ON DELETE CASCADE
-);
+) ENGINE=InnoDB;
 
--- 6. HABILIDADES
+-- 1.7 HABILIDADES
 CREATE TABLE habilidades (
     id_habilidad INT AUTO_INCREMENT PRIMARY KEY,
     nombre_habilidad VARCHAR(100) NOT NULL UNIQUE
-);
+) ENGINE=InnoDB;
 
--- 7. USUARIO_HABILIDADES
+-- 1.8 USUARIO_HABILIDADES
 CREATE TABLE usuario_habilidades (
     id INT AUTO_INCREMENT PRIMARY KEY,
     id_usuario INT NOT NULL,
@@ -85,37 +99,27 @@ CREATE TABLE usuario_habilidades (
     FOREIGN KEY (id_usuario) REFERENCES usuarios(id_usuario) ON DELETE CASCADE,
     FOREIGN KEY (id_habilidad) REFERENCES habilidades(id_habilidad) ON DELETE CASCADE,
     UNIQUE KEY (id_usuario, id_habilidad)
-);
+) ENGINE=InnoDB;
 
--- 8. CARRITO DE COMPRAS 
-CREATE TABLE carritos (
-    id_carrito INT AUTO_INCREMENT PRIMARY KEY,
-    id_cliente INT NOT NULL,
-    id_servicio INT NOT NULL,
-    horas INT DEFAULT 1, -- Renombrado de cantidad a horas para coincidir con prototipo
-    fecha_agregado TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (id_cliente) REFERENCES usuarios(id_usuario) ON DELETE CASCADE,
-    FOREIGN KEY (id_servicio) REFERENCES servicios(id_servicio) ON DELETE CASCADE
-);
-
--- 9. PEDIDOS 
+-- 1.9 PEDIDOS
 CREATE TABLE pedidos (
     id_pedido INT AUTO_INCREMENT PRIMARY KEY,
     id_servicio INT NOT NULL,
     id_cliente INT NOT NULL,
-    estado ENUM('pendiente', 'en_proceso', 'casi_terminado', 'completado', 'cancelado') DEFAULT 'pendiente',
+    estado ENUM('PENDIENTE', 'EN_PROCESO', 'CASI_TERMINADO', 'COMPLETADO', 'CANCELADO') DEFAULT 'PENDIENTE',
     monto_total DECIMAL(10, 2) NOT NULL,
     fecha_pedido TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     fecha_entrega DATETIME,
     notas TEXT,
-    FOREIGN KEY (id_servicio) REFERENCES servicios(id_servicio),
-    FOREIGN KEY (id_cliente) REFERENCES usuarios(id_usuario)
-);
+    archivado BOOLEAN DEFAULT FALSE,
+    FOREIGN KEY (id_servicio) REFERENCES servicios(id_servicio) ON DELETE RESTRICT,
+    FOREIGN KEY (id_cliente) REFERENCES usuarios(id_usuario) ON DELETE RESTRICT
+) ENGINE=InnoDB;
 
-
+-- 1.10 RESEÑAS
 CREATE TABLE resenas (
     id_resena INT AUTO_INCREMENT PRIMARY KEY,
-    id_pedido INT UNIQUE, -- Añadido para vincular la reseña al pedido específico
+    id_pedido INT UNIQUE,
     id_servicio INT NOT NULL,
     id_usuario INT NOT NULL,
     calificacion INT NOT NULL CHECK (calificacion >= 1 AND calificacion <= 5),
@@ -124,59 +128,57 @@ CREATE TABLE resenas (
     FOREIGN KEY (id_pedido) REFERENCES pedidos(id_pedido) ON DELETE CASCADE,
     FOREIGN KEY (id_servicio) REFERENCES servicios(id_servicio) ON DELETE CASCADE,
     FOREIGN KEY (id_usuario) REFERENCES usuarios(id_usuario) ON DELETE CASCADE
-);
+) ENGINE=InnoDB;
 
--- 11. FAVORITOS
-CREATE TABLE favoritos (
-    id_usuario INT NOT NULL,
-    id_servicio INT NOT NULL,
-    PRIMARY KEY (id_usuario, id_servicio),
-    FOREIGN KEY (id_usuario) REFERENCES usuarios(id_usuario) ON DELETE CASCADE,
-    FOREIGN KEY (id_servicio) REFERENCES servicios(id_servicio) ON DELETE CASCADE
-);
-
-
--- 12. CHAT: MENSAJES
+-- 1.11 MENSAJES
 CREATE TABLE mensajes (
-	id_mensaje int NOT NULL AUTO_INCREMENT,
-	id_emisor int NOT NULL,
-	id_receptor int NOT NULL,
-	contenido text COLLATE utf8mb4_unicode_ci NOT NULL,
-	leido tinyint(1) NOT NULL DEFAULT '0',
-	fecha_envio datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-	PRIMARY KEY (id_mensaje),
-	KEY mensajes_id_emisor_fkey (id_emisor),
-	KEY mensajes_id_receptor_fkey (id_receptor),
-	CONSTRAINT mensajes_id_emisor_fkey FOREIGN KEY (id_emisor) REFERENCES usuarios (id_usuario) ON DELETE CASCADE ON UPDATE CASCADE,
-	CONSTRAINT mensajes_id_receptor_fkey FOREIGN KEY (id_receptor) REFERENCES usuarios (id_usuario) ON DELETE CASCADE ON UPDATE CASCADE,
-	CONSTRAINT mensajes_no_autoenvio CHECK (id_emisor <> id_receptor)
-) ;
-
-
--- 13. NOTIFICACIONES 
-CREATE TABLE notificaciones (
-    id_notificacion INT AUTO_INCREMENT PRIMARY KEY,
-    id_usuario INT NOT NULL,
-    titulo VARCHAR(100) NOT NULL,
-    mensaje TEXT NOT NULL,
+    id_mensaje INT AUTO_INCREMENT PRIMARY KEY,
+    id_emisor INT NOT NULL,
+    id_receptor INT NOT NULL,
+    contenido TEXT NOT NULL,
     leido BOOLEAN DEFAULT FALSE,
-    tipo ENUM('pedido', 'mensaje', 'sistema') DEFAULT 'sistema',
-    fecha_notificacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (id_usuario) REFERENCES usuarios(id_usuario) ON DELETE CASCADE
-);
+    fecha_envio DATETIME(3) DEFAULT CURRENT_TIMESTAMP(3),
+    FOREIGN KEY (id_emisor) REFERENCES usuarios (id_usuario) ON DELETE CASCADE,
+    FOREIGN KEY (id_receptor) REFERENCES usuarios (id_usuario) ON DELETE CASCADE,
+    CONSTRAINT mensajes_no_autoenvio CHECK (id_emisor <> id_receptor)
+) ENGINE=InnoDB;
 
--- 14. AUTENTICACION MCP
+-- 1.12 REQUERIMIENTOS (De Prisma Schema)
+CREATE TABLE requerimientos (
+    id_requerimiento INT AUTO_INCREMENT PRIMARY KEY,
+    id_cliente INT NOT NULL,
+    id_carrera INT NOT NULL,
+    titulo VARCHAR(200) NOT NULL,
+    descripcion TEXT NOT NULL,
+    presupuesto DECIMAL(10, 2),
+    estado VARCHAR(50) DEFAULT 'ABIERTO',
+    fecha_publicacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (id_cliente) REFERENCES usuarios(id_usuario) ON DELETE CASCADE,
+    FOREIGN KEY (id_carrera) REFERENCES carreras(id_carrera) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+-- 1.13 POSTULACIONES (De Prisma Schema)
+CREATE TABLE postulaciones (
+    id_postulacion INT AUTO_INCREMENT PRIMARY KEY,
+    id_requerimiento INT NOT NULL,
+    id_estudiante INT NOT NULL,
+    estado VARCHAR(50) DEFAULT 'PENDIENTE',
+    fecha_postulacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (id_requerimiento) REFERENCES requerimientos(id_requerimiento) ON DELETE CASCADE,
+    FOREIGN KEY (id_estudiante) REFERENCES usuarios(id_usuario) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+-- 1.14 AUTENTICACION MCP
 CREATE TABLE autenticacion_mcp (
     id_autenticacion INT AUTO_INCREMENT PRIMARY KEY,
     correo VARCHAR(100) NOT NULL,
     codigo VARCHAR(100) NOT NULL,
     fecha_solicitud TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     INDEX idx_correo (correo),
-    INDEX idx_codigo (codigo),
-    INDEX idx_fecha (fecha_solicitud)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    INDEX idx_codigo (codigo)
+) ENGINE=InnoDB;
 
--- 15. HISTORIAL DE CAMBIOS DE PERFIL (Auditoría)
+-- 1.15 HISTORIAL DE CAMBIOS DE PERFIL
 CREATE TABLE historial_perfil (
     id_historial INT AUTO_INCREMENT PRIMARY KEY,
     id_usuario INT NOT NULL,
@@ -185,4 +187,60 @@ CREATE TABLE historial_perfil (
     valor_nuevo TEXT,
     fecha_cambio TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (id_usuario) REFERENCES usuarios(id_usuario) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB;
+
+-- ==========================================================
+-- 2. DATOS DE SEMILLA (SEED DATA)
+-- ==========================================================
+
+-- 2.1 FACULTADES
+INSERT INTO facultades (nombre_facultad) VALUES ('UIDE - Facultad General');
+SET @id_facultad = LAST_INSERT_ID();
+
+-- 2.2 CARRERAS
+INSERT INTO carreras (id_facultad, nombre_carrera, imagen_carrera) VALUES
+(@id_facultad, 'Administración de Empresas', '/uploads/carreras/administracion.jpg'),
+(@id_facultad, 'Arquitectura', '/uploads/carreras/arquitectura.jpg'),
+(@id_facultad, 'Derecho', '/uploads/carreras/derecho.jpg'),
+(@id_facultad, 'Ingeniería en Sistemas de la Información', '/uploads/carreras/sistemas.jpg'),
+(@id_facultad, 'Psicología Clínica', '/uploads/carreras/psicologia.jpg'),
+(@id_facultad, 'Marketing', '/uploads/carreras/marketing.jpg'),
+(@id_facultad, 'Negocios Internacionales', '/uploads/carreras/negocios.jpg');
+
+-- 2.3 CATEGORIAS
+INSERT INTO categorias (nombre_categoria, descripcion, icono) VALUES
+('Desarrollo Web', 'Sistemas y apps online', 'code'),
+('Diseño Gráfico', 'Logos y branding', 'palette'),
+('Tutorías', 'Clases académicas', 'school'),
+('Multimedia', 'Video y audio', 'movie'),
+('Asesorías', 'Proyectos y consultoría', 'people'),
+('Redacción', 'Contenido y ensayos', 'edit'),
+('Traducción', 'Múltiples idiomas', 'translate'),
+('Marketing', 'Digital y redes', 'trending_up'),
+('Programación', 'Software y apps', 'laptop_mac'),
+('Consultoría', 'Estratégica', 'business_center');
+
+-- 2.4 HABILIDADES
+INSERT INTO habilidades (nombre_habilidad) VALUES
+('JavaScript'), ('Python'), ('Java'), ('C++'), ('React'), ('Node.js'), ('Angular'), ('Vue.js'), ('TypeScript'),
+('SQL'), ('MySQL'), ('PostgreSQL'), ('Diseño Gráfico'), ('UI/UX Design'), ('Adobe Photoshop'), ('Figma'),
+('Marketing Digital'), ('Excel Avanzado'), ('Edición de Video'), ('Trabajo en Equipo'), ('Inglés Avanzado');
+
+-- 2.5 USUARIO ADMINISTRADOR
+-- Contraseña 'admin123' hasheada con bcrypt (costo 10)
+INSERT INTO usuarios (email, contrasena, nombre, apellido, rol, activo, bio, foto_perfil)
+VALUES (
+    'admin@uide.edu.ec', 
+    '$2b$10$/M53G/c6uRfmQA5hlGzrkeSZ7OzJpkZ20hseZDBu/ZnvDUS86SQam', -- Hash para 'admin123'
+    'Administrador', 
+    'Sistema', 
+    'ADMIN', 
+    TRUE, 
+    'Cuenta administrativa del sistema', 
+    'https://ui-avatars.com/api/?name=Admin+Sistema&background=870a42&color=fff'
+);
+
+-- ==========================================================
+-- NOTA FINAL: Seguridad Soft RLS
+-- Implementada a nivel de middleware en el servidor MCP/Backend
+-- ==========================================================

@@ -87,7 +87,13 @@ export const PedidoController = {
                 ]
             },
             include: {
-                servicio: true,
+                servicio: {
+                    include: {
+                        usuario: {
+                            select: { nombre: true, apellido: true, telefono: true, email: true, foto_perfil: true }
+                        }
+                    }
+                },
                 cliente: {
                     select: { nombre: true, apellido: true, email: true, foto_perfil: true }
                 },
@@ -165,22 +171,26 @@ export const PedidoController = {
             return reply.status(404).send({ message: 'Pedido no encontrado' });
         }
 
-        if (pedido.servicio.id_usuario !== user.id_usuario) {
-            console.log('Permiso denegado. Pedido Owner:', pedido.servicio.id_usuario, 'User ID:', user.id_usuario);
+        const userId = Number(user.id_usuario);
+        if (Number(pedido.servicio.id_usuario) !== userId && Number(pedido.id_cliente) !== userId) {
+            console.log('Permiso denegado. Pedido Owner:', pedido.servicio.id_usuario, 'Cliente:', pedido.id_cliente, 'User ID:', userId);
             return reply.status(403).send({ message: 'No tienes permiso para archivar este pedido' });
         }
 
-        console.log('Actualizando pedido a archivado...');
+        const { archivado } = request.body as { archivado?: boolean };
+        const statusToSet = archivado !== undefined ? archivado : true;
+
+        console.log(`Actualizando pedido a archivado: ${statusToSet}...`);
         try {
             const pedidoArchivado = await request.server.prisma.pedido.update({
                 where: { id_pedido: parseInt(id) },
-                data: { archivado: true }
+                data: { archivado: statusToSet }
             });
-            console.log('Pedido archivado con éxito');
+            console.log('Operación de archivo exitosa');
             return reply.send(pedidoArchivado);
         } catch (error) {
             console.error('Error al actualizar pedido:', error);
-            return reply.status(500).send({ message: 'Error interno al archivar' });
+            return reply.status(500).send({ message: 'Error interno al procesar archivo' });
         }
     }
 };

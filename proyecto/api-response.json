@@ -1,0 +1,28 @@
+{
+  "email": "osmacasmo@uide.edu.ec",
+  "nombre": "Osyual",
+  "apellido": "Montoya",
+  "id_usuario": 2,
+  "telefono": "0959515345",
+  "id_carrera": 4,
+  "rol": "ESTUDIANTE",
+  "foto_perfil": "/uploads/4b5c9f87-33f3-4600-845e-d2f06fb12b23.jpeg",
+  "calificacion_promedio": 5,
+  "fecha_registro": "2026-02-13T22:04:54Z",
+  "activo": true,
+  "bio": "Modelo de Inteligencia Artificial: Gemini (Basado en el modelo Nano Banana para generaci├│n de im├ígenes).\nEstilo Visual: Dise├▒o vectorial tipo \"Esports Mascot Logo\", caracterizado por l├¡neas gruesas, sombreados din├ímicos y paleta de colores vibrantes sobre fondo tem├ítico espacial.Modelo de Inteligencia Artificial: Gemini (Basado en el modelo Nano Banana para generaci├│n de im├ígenes). Estilo Visual: Dise├▒o vectorial tipo \"Esports Mascot Logo\", caracterizado por l├¡neas gruesas, sombreados din├ímicos y paleta de colores vibrantes sobre fondo tem├ítico espacial.",
+  "banner": "/uploads/fab888e2-9819-436e-af57-a32d0191fc6c.jpg",
+  "university": "Universidad Internacional del Ecuador",
+  "career": "Ingenier├¡a en Sistemas de la Informaci├│n",
+  "carrera": {
+    "id_facultad": 1,
+    "nombre_carrera": "Ingenier├¡a en Sistemas de la Informaci├│n",
+    "id_carrera": 4,
+    "descripcion_carrera": "Modelo de Inteligencia Artificial: Gemini (Basado en el modelo Nano Banana para generaci├│n de im├ígenes). Estilo Visual: Dise├▒o vectorial tipo \"Esports Mascot Logo\", caracterizado por l├¡neas gruesas, sombreados din├ímicos y paleta de colores vibrantes sobre fondo tem├ítico espacial.",
+    "imagen_carrera": "/uploads/carreras/carrera-4-imagen-1771025776918.png",
+    "banner_carrera": null,
+    "duracion_anios": 4,
+    "tipo_carrera": "MAESTRIA",
+    "activo": true
+  }
+}

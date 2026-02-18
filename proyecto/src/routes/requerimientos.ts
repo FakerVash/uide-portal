@@ -13,6 +13,11 @@ const requerimientoRoutes: FastifyPluginAsync = async (fastify, opts) => {
         preHandler: [checkAuth]
     }, RequerimientoController.create);
 
+    // GET /requerimientos/mis-postulaciones (Ver mis postulaciones - Estudiante)
+    fastify.get('/mis-postulaciones', {
+        preHandler: [checkAuth]
+    }, RequerimientoController.getMisPostulaciones);
+
     // POST /requerimientos/:id/postular (Estudiantes)
     fastify.post('/:id/postular', {
         preHandler: [checkEstudiante]
@@ -32,6 +37,16 @@ const requerimientoRoutes: FastifyPluginAsync = async (fastify, opts) => {
     fastify.get('/:id/postulaciones', {
         preHandler: [checkAuth] // Controller verifies ownership
     }, RequerimientoController.getPostulantes);
+
+    // PATCH /requerimientos/:id/seleccionar/:idPostulacion (Seleccionar candidato)
+    fastify.patch('/:id/seleccionar/:idPostulacion', {
+        preHandler: [checkAuth]
+    }, RequerimientoController.seleccionarCandidato);
+
+    // PATCH /requerimientos/:id/archivar (Archivar - Cliente dueño)
+    fastify.patch('/:id/archivar', {
+        preHandler: [checkAuth]
+    }, RequerimientoController.archive);
 };
 
 export default requerimientoRoutes;

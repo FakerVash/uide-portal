@@ -19,6 +19,7 @@ import uploadRoutes from './routes/upload.js';
 import pedidoRoutes from './routes/pedidos.js';
 import mensajeRoutes from './routes/mensajes.js';
 import requerimientoRoutes from './routes/requerimientos.js';
+import auditoriaRoutes from './routes/auditoria.js';
 
 export default async function buildApp(fastify: FastifyInstance) {
     // Register Schemas
@@ -39,8 +40,8 @@ export default async function buildApp(fastify: FastifyInstance) {
 
     // Health Check Endpoint
     fastify.get('/health', async () => {
-        return { 
-            status: 'ok', 
+        return {
+            status: 'ok',
             timestamp: new Date().toISOString(),
             uptime: process.uptime(),
             environment: process.env.NODE_ENV || 'development'
@@ -62,6 +63,7 @@ export default async function buildApp(fastify: FastifyInstance) {
     await fastify.register(pedidoRoutes, { prefix: '/api/pedidos' });
     await fastify.register(mensajeRoutes, { prefix: '/api/mensajes' });
     await fastify.register(requerimientoRoutes, { prefix: '/api/requerimientos' });
+    await fastify.register(auditoriaRoutes, { prefix: '/api/auditoria' });
 
     return fastify;
 }

@@ -1,0 +1,18 @@
+[
+  {
+    "id_resena": 1,
+    "id_servicio": 1,
+    "calificacion": 5,
+    "comentario": "me gusta muy bien",
+    "fecha_resena": "2026-02-17T19:30:27.000Z",
+    "id_usuario": 3,
+    "id_pedido": 3,
+    "usuario": {
+      "nombre": "Osyual",
+      "apellido": "Montoya"
+    },
+    "servicio": {
+      "titulo": "Fr"
+    }
+  }
+]

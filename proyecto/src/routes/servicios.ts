@@ -29,10 +29,8 @@ const servicioRoutes: FastifyPluginAsync = async (fastify, opts) => {
         schema: {
             description: 'Obtener detalle de un servicio',
             tags: ['Servicios'],
-            params: { type: 'object', properties: { id: { type: 'integer' } } },
-            response: {
-                200: { $ref: 'Servicio#' }
-            }
+            params: { type: 'object', properties: { id: { type: 'integer' } } }
+            // Response validation removed to allow all fields (including resenas) to pass through
         }
     }, ServicioController.getById);
 
@@ -70,6 +68,11 @@ const servicioRoutes: FastifyPluginAsync = async (fastify, opts) => {
             response: { 204: { type: 'null' } }
         }
     }, ServicioController.delete);
+
+    // PATCH /servicios/:id/archivar (Archivar - Dueño)
+    fastify.patch('/:id/archivar', {
+        preHandler: [checkAuth]
+    }, ServicioController.archive);
 };
 
 export default servicioRoutes;
