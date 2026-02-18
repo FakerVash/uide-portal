@@ -12,7 +12,6 @@ export interface UsuarioDTO {
     fecha_registro?: Date;
     activo?: boolean;
     codigo?: string;
-    bio?: string;
     banner?: string;
     university?: string;
     career?: string;
@@ -36,7 +35,6 @@ export const UsuarioSchema = {
         calificacion_promedio: { type: 'number', nullable: true },
         fecha_registro: { type: 'string', format: 'date-time' },
         activo: { type: 'boolean', default: true },
-        bio: { type: 'string', nullable: true },
         banner: { type: 'string', nullable: true },
         university: { type: 'string', nullable: true },
         career: { type: 'string', nullable: true }, // Some users might have text career instead of relation
@@ -74,7 +72,6 @@ export const UpdateUsuarioSchema = {
         telefono: { type: 'string', nullable: true },
         id_carrera: { type: 'integer', nullable: true },
         foto_perfil: { type: 'string', nullable: true },
-        bio: { type: 'string', nullable: true },
         banner: { type: 'string', nullable: true },
         university: { type: 'string', nullable: true },
         career: { type: 'string', nullable: true },

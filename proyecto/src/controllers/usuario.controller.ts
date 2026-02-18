@@ -228,6 +228,7 @@ export const UsuarioController = {
         // Evitar cambios de rol o ID por parte del cliente
         delete body.rol;
         delete (body as any).id_usuario;
+        delete (body as any).bio;
 
         // Extract skills to update separately
         const skillsToUpdate = body.habilidades;

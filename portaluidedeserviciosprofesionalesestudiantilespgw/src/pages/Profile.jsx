@@ -329,6 +329,7 @@ export const Profile = () => {
         id_carrera: formData.id_carrera || null, // Ensure empty string becomes null
         habilidades: selectedSkills.map(s => s.id_habilidad)
       };
+      delete bodyToSend.bio; // Remove bio as it's not in the database schema
 
       console.log('=== SAVING PROFILE ===');
       console.log('selectedSkills:', selectedSkills);
@@ -1013,7 +1014,7 @@ export const Profile = () => {
                   <TextField fullWidth label="Nombre" name="nombre" value={formData.nombre} onChange={handleChange} variant="outlined" InputProps={{ sx: { borderRadius: 3 } }} />
                   <TextField fullWidth label="Apellido" name="apellido" value={formData.apellido} onChange={handleChange} variant="outlined" InputProps={{ sx: { borderRadius: 3 } }} />
                 </Box>
-                <TextField fullWidth multiline rows={3} label="Biografía" name="bio" value={formData.bio} onChange={handleChange} variant="outlined" InputProps={{ sx: { borderRadius: 3 } }} />
+                {/* <TextField fullWidth multiline rows={3} label="Biografía" name="bio" value={formData.bio} onChange={handleChange} variant="outlined" InputProps={{ sx: { borderRadius: 3 } }} /> */}
                 <TextField fullWidth label="Teléfono" name="telefono" value={formData.telefono} onChange={handleChange} variant="outlined" InputProps={{ sx: { borderRadius: 3 } }} />
                 {user.role === 'estudiante' && (
                   <FormControl fullWidth>

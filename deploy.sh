@@ -1,92 +1,33 @@
 #!/bin/bash
 
-# Script de despliegue para producción - UIDE Student Services Portal
-# Este script configura y despliega la aplicación en Docker con AWS Aurora
+# Script de Despliegue Automático para UIDE Portal
 
-set -e
+echo "=========================================="
+echo "Iniciando Despliegue..."
+echo "=========================================="
 
-echo "🚀 Iniciando despliegue de UIDE Student Services Portal..."
+# 1. Obtener cambios más recientes del repositorio
+echo "[1/4] Descargando código actualizado..."
+git pull origin main
 
-# Verificar si Docker está instalado
-if ! command -v docker &> /dev/null; then
-    echo "❌ Docker no está instalado. Por favor, instale Docker primero."
-    exit 1
-fi
-
-# Verificar si Docker Compose está instalado
-if ! command -v docker-compose &> /dev/null; then
-    echo "❌ Docker Compose no está instalado. Por favor, instale Docker Compose primero."
-    exit 1
-fi
-
-# Verificar archivo .env
-if [ ! -f .env ]; then
-    echo "⚠️  Archivo .env no encontrado. Creando desde .env.example..."
-    if [ -f .env.example ]; then
-        cp .env.example .env
-        echo "📝 Por favor, configure las variables de entorno en el archivo .env antes de continuar."
-        echo "   - DATABASE_URL: URL de conexión a AWS Aurora"
-        echo "   - JWT_SECRET: Secreto para JWT"
-        echo "   - EMAIL_*: Configuración de email"
-        exit 1
-    else
-        echo "❌ Archivo .env.example no encontrado."
-        exit 1
-    fi
-fi
-
-# Crear directorios necesarios
-echo "📁 Creando directorios necesarios..."
+# 1.1 Crear carpeta de uploads y dar permisos
+echo "[INFO] Asegurando carpeta de uploads..."
 mkdir -p proyecto/uploads
-mkdir -p logs
+sudo chmod 777 proyecto/uploads
 
-# Construir y levantar servicios
-echo "🔨 Construyendo imágenes Docker..."
-docker-compose build --no-cache
+# 2. Detener contenedores antiguos (opcional, para asegurar limpieza)
+echo "[2/4] Deteniendo servicios anteriores..."
+sudo docker compose down
 
-echo "🚀 Iniciando servicios..."
-docker-compose up -d
+# 3. Limpiar imágenes antiguas (MUY IMPORTANTE SI EL DISCO ESTA LLENO)
+echo "[3/4] Limpiando imágenes en desuso para liberar espacio..."
+sudo docker system prune -af
 
-# Esperar a que los servicios estén listos
-echo "⏳ Esperando a que los servicios estén listos..."
-sleep 30
+# 4. Construir e iniciar contenedores
+echo "[4/4] Construyendo y levantando nuevos contenedores..."
+sudo docker compose up -d --build
 
-# Verificar estado de los servicios
-echo "🔍 Verificando estado de los servicios..."
-docker-compose ps
-
-# Verificar health checks
-echo "🏥 Verificando health checks..."
-
-# Backend health check
-if curl -f http://localhost:3000/health > /dev/null 2>&1; then
-    echo "✅ Backend está saludable"
-else
-    echo "❌ Backend no está respondiendo"
-fi
-
-# Frontend health check
-if curl -f http://localhost:80 > /dev/null 2>&1; then
-    echo "✅ Frontend está saludable"
-else
-    echo "❌ Frontend no está respondiendo"
-fi
-
-# Verificar conexión a base de datos
-if curl -f http://localhost:3000/health/db > /dev/null 2>&1; then
-    echo "✅ Base de datos conectada"
-else
-    echo "❌ Error en la conexión a la base de datos"
-fi
-
-echo ""
-echo "🎉 Despliegue completado!"
-echo "📱 Frontend: http://localhost:80"
-echo "🔧 Backend API: http://localhost:3000"
-echo "📊 API Documentation: http://localhost:3000/documentation"
-echo ""
-echo "📋 Comandos útiles:"
-echo "   Ver logs: docker-compose logs -f"
-echo "   Detener: docker-compose down"
-echo "   Reiniciar: docker-compose restart"
-echo "   Ver estado: docker-compose ps"
+echo "=========================================="
+echo "¡Despliegue Completado Exitosamente!"
+echo "=========================================="
+sudo docker compose ps
